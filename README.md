@@ -15,6 +15,7 @@
 
 ## ドキュメント
 
+- **[API ドキュメント](docs/API.md)** — スクリプトから投稿したい人はこれ
 - 仕様: [docs/SPEC.md](docs/SPEC.md)
 - 開発計画・進捗: [docs/PLAN.md](docs/PLAN.md)
 - 実装中に決めたこと: [docs/DECISIONS.md](docs/DECISIONS.md)
@@ -41,6 +42,8 @@ curl -X POST https://signboard.emaker.dev/api/v1/notices \
   -H "Content-Type: application/json" \
   -d '{"body":"お知らせの本文"}'
 ```
+
+キーの発行は管理画面の「APIキー」タブから。使い方の詳細は [docs/API.md](docs/API.md)。
 
 ### 表示を調整する
 

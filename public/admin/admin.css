@@ -204,3 +204,56 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 .toast[hidden] { display: none; }
 .toast.is-error { background: var(--danger); color: #fff; }
+
+/* ---- APIの使い方（キー管理タブ） ---- */
+
+.card h3.sub {
+  margin: 20px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.endpoints {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.endpoints th,
+.endpoints td {
+  text-align: left;
+  padding: 7px 10px 7px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: baseline;
+}
+
+.endpoints tr:last-child th,
+.endpoints tr:last-child td { border-bottom: none; }
+
+/* メソッド名。幅を揃えて縦に読めるようにする */
+.endpoints th {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.endpoints td:last-child { color: var(--dim); }
+
+.endpoints code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.hint code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}

@@ -102,7 +102,25 @@
 
       <div class="card">
         <h2>使い方</h2>
+        <p class="hint">発行したキーを <code>Authorization</code> ヘッダに付けて叩きます。</p>
         <pre class="log-diff" id="key-usage"></pre>
+
+        <h3 class="sub">できること</h3>
+        <table class="endpoints">
+          <tbody>
+            <tr><th>GET</th><td><code>/api/v1/notices</code></td><td>いま流れているものを見る</td></tr>
+            <tr><th>POST</th><td><code>/api/v1/notices</code></td><td>投稿する</td></tr>
+            <tr><th>PATCH</th><td><code>/api/v1/notices/:id</code></td><td>本文や期限を変える</td></tr>
+            <tr><th>DELETE</th><td><code>/api/v1/notices/:id</code></td><td>消す</td></tr>
+          </tbody>
+        </table>
+
+        <p class="hint">
+          本文は200文字まで。期限を省略すると24時間で消えます。<br>
+          スクリプトの例やエラーの一覧は
+          <a class="link" href="https://github.com/EngineMaker/signboard/blob/main/docs/API.md"
+             target="_blank" rel="noopener">API ドキュメント</a> にあります。
+        </p>
       </div>
 
       <div id="key-list" class="list"></div>
