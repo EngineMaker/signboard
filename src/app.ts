@@ -7,6 +7,7 @@ import { apiRoutes } from './routes/api.ts';
 import { streamRoutes } from './routes/stream.ts';
 import { EventBus } from './events/bus.ts';
 import { adminApiRoutes } from './routes/admin-api.ts';
+import { publicApiRoutes } from './routes/public-api.ts';
 import { authRoutes } from './routes/auth.ts';
 import { getCookie } from 'hono/cookie';
 import { decodeSession } from './auth/session.ts';
@@ -31,6 +32,9 @@ export function createApp(db: DB, opts: AppOptions = {}) {
 
   app.route('/api', apiRoutes(db));
   app.route('/api', streamRoutes(events));
+
+  // APIキーで叩ける公開 API（SPEC §2.1）。認証設定の有無によらず使える。
+  app.route('/api/v1', publicApiRoutes(db, events));
 
   if (opts.auth) {
     const auth = opts.auth;

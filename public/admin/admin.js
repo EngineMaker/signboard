@@ -57,11 +57,12 @@ function setupTabs() {
       tab.classList.add('is-active');
 
       var name = tab.dataset.tab;
-      ['notices', 'settings', 'audit'].forEach(function (p) {
+      ['notices', 'settings', 'keys', 'audit'].forEach(function (p) {
         document.getElementById('panel-' + p).hidden = p !== name;
       });
 
       if (name === 'settings') loadSettings();
+      if (name === 'keys') loadApiKeys();
       if (name === 'audit') loadAuditLogs();
     });
   });
@@ -222,6 +223,114 @@ function setupSettingsForm() {
   });
 }
 
+// ---- APIキー ----
+
+function renderApiKeys(data) {
+  var list = document.getElementById('key-list');
+  list.textContent = '';
+
+  if (data.keys.length === 0) {
+    var empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'まだキーはありません';
+    list.appendChild(empty);
+    return;
+  }
+
+  data.keys.forEach(function (k) {
+    var item = document.createElement('div');
+    item.className = 'item' + (k.revokedAt ? ' is-expired' : '');
+
+    var title = document.createElement('p');
+    title.className = 'item-body';
+    title.textContent = k.label;
+    item.appendChild(title);
+
+    var meta = document.createElement('div');
+    meta.className = 'item-meta';
+    [
+      k.prefix + '…',
+      k.ownerName,
+      '発行 ' + formatTime(k.createdAt),
+      k.lastUsedAt ? '最終使用 ' + formatTime(k.lastUsedAt) : '未使用',
+      k.revokedAt ? '失効済み' : '',
+    ].forEach(function (text) {
+      if (!text) return;
+      var span = document.createElement('span');
+      span.textContent = text;
+      meta.appendChild(span);
+    });
+    item.appendChild(meta);
+
+    if (!k.revokedAt) {
+      var actions = document.createElement('div');
+      actions.className = 'item-actions';
+      var btn = document.createElement('button');
+      btn.className = 'danger';
+      btn.textContent = '失効させる';
+      btn.addEventListener('click', function () { revokeKey(k); });
+      actions.appendChild(btn);
+      item.appendChild(actions);
+    }
+
+    list.appendChild(item);
+  });
+}
+
+function loadApiKeys() {
+  document.getElementById('key-usage').textContent =
+    'curl -X POST ' + location.origin + '/api/v1/notices \\\n' +
+    '  -H "Authorization: Bearer <発行したキー>" \\\n' +
+    '  -H "Content-Type: application/json" \\\n' +
+    '  -d \'{"body":"お知らせの本文"}\'';
+
+  return api('/api-keys').then(renderApiKeys).catch(function (e) { toast(e.message, true); });
+}
+
+function revokeKey(key) {
+  if (!confirm('「' + key.label + '」を失効させますか？\nこのキーを使っているスクリプトは動かなくなります。')) return;
+
+  api('/api-keys/' + key.id, { method: 'DELETE' })
+    .then(function () { toast('失効させました'); return loadApiKeys(); })
+    .catch(function (e) { toast(e.message, true); });
+}
+
+function setupKeyForm() {
+  var form = document.getElementById('new-key');
+  var result = document.getElementById('key-result');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var label = document.getElementById('key-label').value.trim();
+    if (!label) { toast('名前を入力してください', true); return; }
+
+    api('/api-keys', { method: 'POST', body: JSON.stringify({ label: label }) })
+      .then(function (data) {
+        document.getElementById('key-plaintext').textContent = data.plaintext;
+        result.hidden = false;
+        document.getElementById('key-label').value = '';
+        return loadApiKeys();
+      })
+      .catch(function (e) { toast(e.message, true); });
+  });
+
+  document.getElementById('key-copy').addEventListener('click', function () {
+    var text = document.getElementById('key-plaintext').textContent;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+        .then(function () { toast('コピーしました'); })
+        .catch(function () { toast('コピーできませんでした。手で選択してください', true); });
+    } else {
+      toast('この環境ではコピーできません。手で選択してください', true);
+    }
+  });
+
+  document.getElementById('key-close').addEventListener('click', function () {
+    result.hidden = true;
+    document.getElementById('key-plaintext').textContent = '';
+  });
+}
+
 // ---- 操作履歴 ----
 
 var ACTION_LABELS = {
@@ -319,6 +428,7 @@ function start() {
   setupTabs();
   setupNoticeForm();
   setupSettingsForm();
+  setupKeyForm();
   document.getElementById('audit-filter').addEventListener('change', loadAuditLogs);
 
   fetch('/api/me')

@@ -7,6 +7,8 @@ import { getNotice, listNotices } from '../repo/notices.ts';
 import { getSettings, DEFAULT_SETTINGS, type Settings } from '../repo/settings.ts';
 import { createNotice, deleteNotice, updateNotice } from '../service/notices.ts';
 import { updateSettings } from '../service/settings.ts';
+import { issueApiKey, revokeApiKey } from '../service/api-keys.ts';
+import { listApiKeys } from '../repo/api-keys.ts';
 import type { AuditAction } from '../db/schema.ts';
 import type { EventBus } from '../events/bus.ts';
 
@@ -153,6 +155,56 @@ export function adminApiRoutes(db: DB, auth: AuthConfig, events?: EventBus) {
   });
 
   app.get('/settings/defaults', (c) => c.json({ defaults: DEFAULT_SETTINGS }));
+
+  // ---- API キー ----
+
+  app.get('/api-keys', (c) => {
+    // 平文もハッシュも返さない。一覧に必要な情報だけ。
+    const keys = listApiKeys(db).map((k) => ({
+      id: k.id,
+      label: k.label,
+      prefix: k.key_prefix,
+      ownerName: k.owner_name,
+      createdAt: k.created_at,
+      lastUsedAt: k.last_used_at,
+      revokedAt: k.revoked_at,
+    }));
+    return c.json({ keys });
+  });
+
+  app.post('/api-keys', async (c) => {
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const label = typeof body?.label === 'string' ? body.label.trim() : '';
+
+    if (label === '') return c.json({ error: '用途がわかる名前を付けてください' }, 400);
+    if (label.length > 60) return c.json({ error: '名前は60文字以内にしてください' }, 400);
+
+    const issued = issueApiKey(db, { label }, context(c, events));
+
+    // 平文を返すのはこの1回だけ。
+    return c.json(
+      {
+        key: {
+          id: issued.row.id,
+          label: issued.row.label,
+          prefix: issued.row.key_prefix,
+          createdAt: issued.row.created_at,
+        },
+        plaintext: issued.plaintext,
+      },
+      201,
+    );
+  });
+
+  app.delete('/api-keys/:id', (c) => {
+    const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id)) return c.json({ error: 'ID が不正です' }, 400);
+
+    const revoked = revokeApiKey(db, id, context(c, events));
+    if (!revoked) return c.json({ error: 'APIキーが見つかりません' }, 404);
+
+    return c.json({ revoked: { id: revoked.id, label: revoked.label } });
+  });
 
   // ---- 監査ログ ----
 

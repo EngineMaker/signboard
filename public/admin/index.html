@@ -18,6 +18,7 @@
   <nav class="tabs" role="tablist">
     <button class="tab is-active" data-tab="notices" role="tab">お知らせ</button>
     <button class="tab" data-tab="settings" role="tab">表示設定</button>
+    <button class="tab" data-tab="keys" role="tab">APIキー</button>
     <button class="tab" data-tab="audit" role="tab">操作履歴</button>
   </nav>
 
@@ -75,6 +76,36 @@
           <span id="settings-status" class="status"></span>
         </div>
       </form>
+    </section>
+
+    <!-- APIキー -->
+    <section id="panel-keys" class="panel" hidden>
+      <form id="new-key" class="card">
+        <h2>APIキーを発行</h2>
+        <p class="hint">自分のスクリプトから掲示板に投稿するためのキーです。発行時に一度だけ表示されます。</p>
+        <label class="field">
+          用途がわかる名前
+          <input type="text" id="key-label" maxlength="60" placeholder="例) ゴミ出し通知スクリプト">
+        </label>
+        <button type="submit" class="primary">発行する</button>
+      </form>
+
+      <div id="key-result" class="card" hidden>
+        <h2>発行しました</h2>
+        <p class="hint">この画面を閉じると二度と表示されません。いますぐコピーしてください。</p>
+        <pre id="key-plaintext" class="log-diff"></pre>
+        <div class="row">
+          <button type="button" id="key-copy">コピー</button>
+          <button type="button" id="key-close">閉じる</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>使い方</h2>
+        <pre class="log-diff" id="key-usage"></pre>
+      </div>
+
+      <div id="key-list" class="list"></div>
     </section>
 
     <!-- 操作履歴 -->
