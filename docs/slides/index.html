@@ -244,15 +244,31 @@ pre .k { color: var(--led); }
 .phase h3 { margin: 0 0 4px; font-size: clamp(15px, 1.7vw, 19px); }
 .phase p { font-size: clamp(13.5px, 1.45vw, 16.5px); color: var(--ink-dim); }
 
+/*
+ * 写真やスクショ。画面に収まる範囲で最大化する。
+ * 高さを制限しないと、縦長の画像でスライドからはみ出す。
+ */
 .shot {
   border: 1px solid var(--line);
   border-radius: 6px;
   overflow: hidden;
   background: #000;
   max-width: 100%;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
 }
 
-.shot img { display: block; width: 100%; height: auto; }
+.shot img,
+.shot video {
+  display: block;
+  max-width: 100%;
+  /* 見出しとキャプションのぶんを残して、余りを画像に充てる */
+  max-height: 58vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
 
 .caption { font-size: clamp(12px, 1.25vw, 14px); color: var(--ink-dim); font-family: var(--mono); }
 
@@ -329,6 +345,8 @@ li strong { color: var(--ink); font-weight: 500; }
 
 @media (max-width: 560px) {
   .slide { gap: 20px; padding-top: 5vh; }
+  /* コードを2つ載せる枚（SSE の余談）は狭い画面で詰める */
+  pre { line-height: 1.5; padding: 12px; }
   .versus .after { border-left: none; border-top: 2px solid var(--led); padding-left: 0; padding-top: 16px; }
 }
 </style>
@@ -339,22 +357,22 @@ li strong { color: var(--ink); font-weight: 500; }
   <section class="slide is-active is-cover" data-tone="lead">
     <div class="eyebrow">シェアハウスの日曜大工</div>
     <h1>リビングの<br>電光掲示板</h1>
-    <p class="lede">使っていない iPad を、住人みんなが書き込める掲示板にした話。<br>作ったもの・使い方・中身・AI との作り方。</p>
+    <p class="lede">使っていないiPadを使って電光掲示板のようなものを作りました<br>文字が動いてると注目を引きやすい気がする</p>
     <p class="caption">signboard.emaker.dev</p>
   </section>
 
   <!-- 2 -->
   <section class="slide">
     <div class="eyebrow">きっかけ</div>
-    <h2>お知らせを変えるたびに<br>iPad の前まで行くのが面倒</h2>
+    <h2>お知らせを変えるのに<br>いちいちiPadまで行くのが面倒でした</h2>
     <div class="versus">
       <div class="block before">
-        <h3>市販の LED バナーアプリ</h3>
-        <p>文字は流せる。ただし内容を変えるには iPad 本体を触るしかない。リビングまで行って、アプリを開いて、キーボードで打ち直す。</p>
+        <h3>最初は市販のアプリを入れてみた</h3>
+        <p>文字を流すだけならこれで十分でした。でも内容を変えるにはiPadを直接触るしかなくて、リビングまで行ってアプリを開いて打ち直すことになります</p>
       </div>
       <div class="block after">
-        <h3>ほしかったもの</h3>
-        <p>自分の部屋から、スマホから、Discord から。<strong>どこにいても書き換えられる</strong>掲示板。iPad は置きっぱなしで触らない。</p>
+        <h3>自分の部屋から変えたい</h3>
+        <p>スマホからでもDiscordからでもいいので、<strong>どこにいても書き換えられる</strong>ようにしたかった。iPadは置きっぱなしで触らずに済ませたい</p>
       </div>
     </div>
   </section>
@@ -362,38 +380,39 @@ li strong { color: var(--ink); font-weight: 500; }
   <!-- 3 -->
   <section class="slide">
     <div class="eyebrow">できたもの</div>
-    <h2>リビングに置きっぱなしの iPad</h2>
+    <h2>こうなりました</h2>
     <div class="shot">
-      <img src="board.png" alt="黒い画面に琥珀色ではなく白い大きな文字で「AIもくもく勉強会 16時から発表」と流れている掲示板。右上に日付と時刻。">
+      <video src="product.mp4" autoplay loop muted playsinline
+             aria-label="リビングに置いた iPad の画面で、お知らせが右から左へ流れている様子"></video>
     </div>
-    <p class="caption">実際の画面。Safari で「ホーム画面に追加」して全画面表示している。</p>
+    <p class="caption">実際に置いてあるところ。文字が流れてると目に入りやすい気がします</p>
   </section>
 
   <!-- 4 -->
   <section class="slide">
     <div class="eyebrow">使い方</div>
-    <h2>書き込む方法は3つ</h2>
+    <h2>書き込む方法を3つ用意しました</h2>
     <div class="routes">
       <div class="route">
         <span class="route-name">Discord</span>
-        <span class="route-desc"><code>/signboard post</code> と打つだけ。いちばん手軽で、たぶんこれしか使わない。</span>
+        <span class="route-desc"><code>/signboard post</code> と打つだけ。たぶん普段はこれしか使わない気がします</span>
       </div>
       <div class="route">
         <span class="route-name">管理画面</span>
-        <span class="route-desc">スマホのブラウザから。一覧・編集・削除と、文字サイズやスクロール速度の調整。</span>
+        <span class="route-desc">スマホのブラウザから開けます。過去のお知らせを消したり、文字サイズやスクロール速度を変えたりできます</span>
       </div>
       <div class="route">
         <span class="route-name">API</span>
-        <span class="route-desc">自分のスクリプトから叩く用。ゴミ出しの日に自動で流す、みたいな使い方ができる。</span>
+        <span class="route-desc">自分のスクリプトから叩けます。ゴミ出しの日に自動で流す、みたいなことができるはず</span>
       </div>
     </div>
-    <p class="dim">どれで書いても同じ掲示板に出る。誰が書いたかは記録に残る。</p>
+    <p class="dim">どれで書いても同じ掲示板に出ます。誰が書いたかもちゃんと残ります</p>
   </section>
 
   <!-- 5 -->
   <section class="slide">
     <div class="eyebrow">使い方</div>
-    <h2>Discord から投稿する</h2>
+    <h2>Discordから投稿してみる</h2>
     <pre><span class="c"># 24時間表示される（既定）</span>
 /signboard post <span class="k">text:</span>土曜に共用部の大掃除やります。10時集合
 
@@ -402,60 +421,60 @@ li strong { color: var(--ink); font-weight: 500; }
 
 <span class="c"># いま流れているものを確認する</span>
 /signboard list</pre>
-    <p><strong>期限が来たら自動で消える。</strong>古いお知らせが残り続けて、誰も読まない掲示板になるのを防ぐため。</p>
+    <p>放っておくと<strong>期限が来たら勝手に消えます</strong>。古いお知らせが残ったままだと、そのうち誰も読まなくなりそうだったので</p>
   </section>
 
   <!-- 6 -->
   <section class="slide">
     <div class="eyebrow">使い方</div>
-    <h2>勝手に書かれないように</h2>
+    <h2>誰でも書けると困るので</h2>
     <div class="cols two">
       <div class="block">
-        <h3>書けるのは EM住民ロールを持つ人だけ</h3>
-        <p>Discord のロールをそのまま権限に使っている。新しい住人が入ったらロールを付けるだけ。アカウントを別に作る必要はない。</p>
+        <h3>EM住民ロールを持ってる人だけ</h3>
+        <p>Discordのロールをそのまま権限に使いました。新しい住人が入ったらロールを付けるだけで済むし、アカウントを別に作らなくていいので楽です</p>
       </div>
       <div class="block">
-        <h3>誰が何をしたか全部残る</h3>
-        <p>投稿・編集・削除・設定変更を記録している。消したお知らせの本文も追える。この記録自体は消せない。</p>
+        <h3>操作の履歴は全部残しました</h3>
+        <p>投稿も編集も削除も記録しています。消したお知らせの本文も後から見られます。この履歴自体は誰も消せないようにしてあります</p>
       </div>
     </div>
-    <p class="dim">いたずら防止というより、後から「あれ誰が書いたんだっけ」を追えるようにするため。</p>
+    <p class="dim">いたずら防止というより、「あれ誰が書いたんだっけ」を後から調べられるようにしたかった</p>
   </section>
 
   <!-- 7 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">ここから中身の話</div>
-    <h2>作りはかなり小さい</h2>
+    <h2>中身はけっこう小さいです</h2>
     <div class="figures">
       <div class="figure"><span class="n">1</span><span class="l">プロセス</span></div>
       <div class="figure"><span class="n">1</span><span class="l">ファイルのDB</span></div>
       <div class="figure"><span class="n">0</span><span class="l">ビルド工程</span></div>
       <div class="figure"><span class="n">0</span><span class="l">円/月</span></div>
     </div>
-    <p class="lede">Web サーバーも Discord Bot も同じプロセス。データは SQLite ファイル1個。ハウス内の Ubuntu で動いていて、外部サービスの課金はない。</p>
+    <p class="lede">WebサーバーもDiscord Botも同じプロセスです。データはSQLiteのファイル1個だけ。ハウスのUbuntuに置いてるので支払いもゼロ</p>
   </section>
 
   <!-- 8 -->
   <section class="slide">
     <div class="eyebrow">技術選定</div>
-    <h2>iPad が古いことから逆算した</h2>
+    <h2>iPadが古いので、そこから考えました</h2>
     <div class="cols two">
       <div class="block">
-        <h3>制約：iPad Pro 9.7 / iPadOS 16</h3>
-        <p>2016年の機種で、OS はこれ以上上がらない。Safari 16 で動かないものは使えない。メモリ 2GB で、24時間つけっぱなしにする。</p>
+        <h3>iPad Pro 9.7インチ / iPadOS 16</h3>
+        <p>2016年の機種で、OSはもう上がりません。Safari 16で動かないものは使えない。メモリも2GBしかないのに24時間つけっぱなしにします</p>
       </div>
       <div class="block">
-        <h3>選択：フレームワークを使わない</h3>
-        <p>掲示板の画面は素の HTML・CSS・JavaScript。ビルドしないので、<strong>そもそも互換性の問題が起きない</strong>。デプロイも <code>git pull</code> だけで済む。</p>
+        <h3>なのでフレームワークはやめました</h3>
+        <p>掲示板の画面は素のHTMLとCSSとJavaScriptです。ビルドしないので<strong>そもそも互換性で困らない</strong>。デプロイも <code>git pull</code> だけで済みます</p>
       </div>
     </div>
-    <p class="dim">サーバー側は Node + Hono + SQLite。住人数十人・お知らせ数十件の規模に Postgres は要らない。</p>
+    <p class="dim">サーバー側はNodeとHonoとSQLite。住人が数十人、お知らせも数十件なので、Postgresを立てるほどでもないかなと</p>
   </section>
 
   <!-- 9 -->
   <section class="slide">
     <div class="eyebrow">仕組み</div>
-    <h2>投稿した瞬間に画面が変わる</h2>
+    <h2>投稿するとすぐ画面が変わります</h2>
     <pre>Discord / 管理画面 / API
         │
         ↓  書き込み
@@ -467,13 +486,13 @@ li strong { color: var(--ink); font-weight: 500; }
     <div class="figures">
       <div class="figure"><span class="n">147</span><span class="l">ミリ秒で反映（実測）</span></div>
     </div>
-    <p>サーバーからは<strong>「変わった」という合図だけ</strong>を送り、中身は送らない。iPad 側が改めて取りに行く。取得経路が1本になるので、再接続してもズレない。</p>
+    <p>サーバーからは<strong>「変わったよ」という合図だけ</strong>を送って、中身は送っていません。受け取ったiPadが改めて取りに行きます。取りに行く経路が1本になるので、途中で切れてもズレないはず</p>
   </section>
 
   <!-- 10 余談 -->
   <section class="slide" data-tone="aside">
     <div class="eyebrow">余談 / Server-Sent Events</div>
-    <h2>SSE は Web 標準。<br>ライブラリも特別なプロトコルも要らない</h2>
+    <h2>SSE（Server Sent Events）というのを教えてもらいました</h2>
     <div class="cols two">
       <div class="block">
         <h3>ブラウザ側</h3>
@@ -482,7 +501,7 @@ li strong { color: var(--ink); font-weight: 500; }
   .addEventListener(<span class="c">'notices-changed'</span>, () =&gt; {
     fetchNotices();
   });</pre>
-        <p>切断したら<strong>ブラウザが勝手に繋ぎ直す</strong>。自前で書いたのは再接続の間隔調整だけ。</p>
+        <p>APIのエンドポイントに対してイベントリスナーを追加できます<br>切断しても<strong>ブラウザが勝手に繋ぎ直してくれる</strong>らしい</p>
       </div>
       <div class="block">
         <h3>サーバー側が流しているもの</h3>
@@ -491,9 +510,11 @@ li strong { color: var(--ink); font-weight: 500; }
 event: connected
 data: 1789876681067
 
+<span class="c">（数時間経過…）</span>
+
 event: notices-changed
 data: 1789876712043</pre>
-        <p>レスポンスを閉じずにテキストを流し続けるだけ。<strong>ただの HTTP</strong>。</p>
+        <p>通信を閉じずに、ゆーっくりテキストを返してるような感じ<br><strong>ただの HTTP</strong></p>
       </div>
     </div>
   </section>
@@ -501,7 +522,7 @@ data: 1789876712043</pre>
   <!-- 11 余談 -->
   <section class="slide" data-tone="aside">
     <div class="eyebrow">余談 / なぜ WebSocket ではないのか</div>
-    <h2>一方通行で足りるなら<br>一方通行のものを選ぶ</h2>
+    <h2>WebSocketじゃないの？と思ったけど</h2>
     <div class="table-wrap">
       <table class="compare">
         <thead>
@@ -511,68 +532,68 @@ data: 1789876712043</pre>
           <tr>
             <th>ポーリング</th>
             <td>都度リクエスト</td>
-            <td>確実だが、30秒間隔だと最悪30秒待たされる。常時表示だと気になる</td>
+            <td>確実だけど、30秒間隔だと最悪30秒待つことになる。ずっと表示してると気になりそう</td>
           </tr>
           <tr class="pick">
             <th>SSE</th>
             <td>サーバー → ブラウザ</td>
-            <td><strong>採用。</strong>ただの HTTP なので Tunnel もそのまま通る。再接続が標準で付いてくる</td>
+            <td><strong>これにしました。</strong>ただのHTTPなのでTunnelもそのまま通るし、再接続も最初から付いてくる</td>
           </tr>
           <tr>
             <th>WebSocket</th>
             <td>双方向</td>
-            <td>今回 iPad からサーバーへ送るものが無い。接続の昇格が要り、経路によっては塞がれる</td>
+            <td>今回iPadから送りたいものが無い。接続の昇格が必要で、経路によっては塞がれることもあるらしい</td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="dim">iPadOS 16 の Safari でも問題なく動いた。古い端末が対象なので、枯れた標準であることがそのまま利点になった。</p>
+    <p class="dim">iPadOS 16のSafariでも普通に動きました。古い端末が相手だと、枯れてることがそのまま強みになる気がします</p>
   </section>
 
   <!-- 12 -->
   <section class="slide">
     <div class="eyebrow">仕組み</div>
-    <h2>サーバーが落ちても画面は止めない</h2>
-    <p class="lede">動いているのは GUI も立ち上がっている兼用マシン。自動更新で勝手に再起動することもある。<strong>常時稼働は最初から期待していない。</strong></p>
+    <h2>サーバーが止まっても画面は動かしたい</h2>
+    <p class="lede">動かしてるのは普段づかいもしてるマシンで、自動更新で勝手に再起動したりします。<strong>ずっと動いてる前提は最初から捨てました</strong></p>
     <ul>
-      <li><strong>取得できた内容は iPad 側に保存しておく</strong> ── 通信が切れても最後の内容を流し続ける</li>
-      <li><strong>隅に小さく「オフライン」と出す</strong> ── 古い情報を新鮮な顔で流さない</li>
-      <li><strong>繋ぎ直しは自動</strong> ── サーバーが戻れば勝手に追いつく</li>
+      <li>取得できた内容はiPad側に保存しておいて、通信が切れても<strong>最後の内容を流し続けます</strong></li>
+      <li>ただし隅に小さく「オフライン」と出します。古い情報を新鮮な顔で流すのも嫌なので</li>
+      <li>繋ぎ直しは勝手にやってくれるので、サーバーが戻れば追いつきます</li>
     </ul>
-    <p class="dim">掲示板が数分止まっても誰も困らない状態にしておく、という方針。</p>
+    <p class="dim">数分止まっても誰も困らない状態にしておけば、まあいいかなと</p>
   </section>
 
   <!-- 13 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">ここから作り方の話</div>
-    <h2>AI に実装させて<br>人間がレビューする</h2>
-    <p class="lede">コードはほぼ全部 AI が書いた。人間がやったのは、要件を答えること・方針を決めること・各段階で「いいよ」と言うこと。</p>
+    <h2>コードはほぼ全部<br>AIに書いてもらいました</h2>
+    <p class="lede">自分がやったのは、聞かれたことに答えて、方針を決めて、区切りごとに「いいよ」と言うくらいでした</p>
   </section>
 
   <!-- 14 -->
   <section class="slide">
     <div class="eyebrow">進め方</div>
-    <h2>いきなり実装させない</h2>
+    <h2>いきなり作らせないようにしました</h2>
     <div class="phases">
       <div class="phase">
         <span class="phase-n">01</span>
         <div>
-          <h3>要件を聞かせる</h3>
-          <p>一度に3〜5問まで、何往復かに分けて。答えを SPEC.md にまとめさせ、承認してから次へ。</p>
+          <h3>まず質問してもらう</h3>
+          <p>一度に3〜5問までにしてもらって、何往復かに分けて聞いてもらいました。答えをSPEC.mdにまとめてもらって、それでよければ次へ</p>
         </div>
       </div>
       <div class="phase">
         <span class="phase-n">02</span>
         <div>
-          <h3>技術選定と計画を出させる</h3>
-          <p>選択肢を2〜3案とトレードオフ。実装は縦切りの9ステップに分け、各ステップに機械的に検証できる受け入れ条件を付ける。</p>
+          <h3>作り方を提案してもらう</h3>
+          <p>技術の選択肢を2〜3案、それぞれの良し悪し付きで。実装は9ステップに分けて、各ステップに「これができたら完了」という条件を付けてもらいました</p>
         </div>
       </div>
       <div class="phase">
         <span class="phase-n">03</span>
         <div>
-          <h3>1ステップずつ実装させる</h3>
-          <p>完了ごとに受け入れ条件の結果を報告させ、こちらが確認してから次へ。計画から外れそうなら止めて相談させる。</p>
+          <h3>1ステップずつ進めてもらう</h3>
+          <p>終わるたびに条件の確認結果を報告してもらって、こっちが見てから次へ。計画から外れそうなときは止めて相談してもらうようにしました</p>
         </div>
       </div>
     </div>
@@ -581,60 +602,60 @@ data: 1789876712043</pre>
   <!-- 15 -->
   <section class="slide">
     <div class="eyebrow">進め方</div>
-    <h2>決めたことをリポジトリに残す</h2>
+    <h2>決めたことはファイルに残してもらう</h2>
     <div class="routes">
       <div class="route">
         <span class="route-name">SPEC.md</span>
-        <span class="route-desc">何を作るか。ヒアリングの結果と、サーバーを調べて分かったこと。</span>
+        <span class="route-desc">何を作るか。質問に答えた内容と、サーバーを調べて分かったこと</span>
       </div>
       <div class="route">
         <span class="route-name">PLAN.md</span>
-        <span class="route-desc">どう作るか。技術選定の理由、9ステップ、各ステップの受け入れ条件と進捗。</span>
+        <span class="route-desc">どう作るか。技術を選んだ理由と、9ステップの中身と進み具合</span>
       </div>
       <div class="route">
         <span class="route-name">DECISIONS.md</span>
-        <span class="route-desc">実装中に決めたこと28件。なぜそうしたか、代償は何か、いつ見直すか。</span>
+        <span class="route-desc">作りながら決めたこと28件。なぜそうしたか、代わりに何を諦めたか</span>
       </div>
       <div class="route">
         <span class="route-name">OPERATIONS.md</span>
-        <span class="route-desc">動かし方、壊れたときの直し方、手作業が必要な部分。</span>
+        <span class="route-desc">動かし方と、壊れたときの直し方。手でやるしかない部分もここに</span>
       </div>
     </div>
-    <p><strong>会話が途切れても文脈が消えない。</strong>実際この開発でも、途中で接続が切れたり別の話題を挟んだりしたが、ファイルを読めば続きから再開できた。</p>
+    <p>これがあると<strong>会話が途切れても続きからやれます</strong>。実際、途中で接続が切れたり全然違う話をしたりしたけど、ファイルを読み直してもらえば戻ってこれました</p>
   </section>
 
   <!-- 16 -->
   <section class="slide">
     <div class="eyebrow">やってみて</div>
-    <h2>AI が間違えた3か所</h2>
+    <h2>AIが間違えたところもあります</h2>
     <ul>
-      <li><strong>文字が大きすぎた</strong> ── 画面の22%を1文字に割り当て、2文字しか入らなかった。実際に描画して初めて分かった。</li>
-      <li><strong>型チェックが通るのに起動しない</strong> ── TypeScript のある書き方が、ビルドなしの実行方式では動かなかった。<code>tsc</code> は素通りする。</li>
-      <li><strong>systemd が古い Node を掴んだ</strong> ── 手で動かすと v24、サービスとして動かすと v18。環境変数の展開規則も踏んだ。</li>
+      <li>最初、<strong>文字が大きすぎて2文字しか入りませんでした</strong>。画面に描いてみて初めて気づいたやつです</li>
+      <li><strong>型チェックは通るのに起動しない</strong>ことがありました。TypeScriptのある書き方が、ビルドなしだと動かないらしい</li>
+      <li>サーバーに置いたら<strong>古いNodeを掴んで動かなかった</strong>。手で動かすとv24なのに、サービスにするとv18になってました</li>
     </ul>
-    <p class="dim">どれも「書けているか」ではなく「実際に動かしたか」で見つかったもの。受け入れ条件を機械で確認できる形にしておくのが効いた。</p>
+    <p class="dim">どれも動かしてみないと分からないやつでした。各ステップに確認できる条件を付けておいてよかったと思います</p>
   </section>
 
   <!-- 17 -->
   <section class="slide">
     <div class="eyebrow">やってみて</div>
-    <h2>効いたこと</h2>
+    <h2>やってみてよかったこと</h2>
     <div class="cols two">
       <div class="block">
-        <h3>先に環境を調べさせた</h3>
-        <p>「サーバーは常時稼働が保証されない兼用機」と分かったのが設計前だったので、オフライン耐性を最優先に据えられた。作ってから気付くと作り直しになる。</p>
+        <h3>先にサーバーを調べてもらった</h3>
+        <p>「このマシンはずっと動いてる保証がない」と分かったのが設計の前だったので、オフラインでも動く作りを最初から入れられました。後から気づいてたら作り直しでした</p>
       </div>
       <div class="block">
-        <h3>各ステップに検証手順を持たせた</h3>
-        <p>「テストが通る」「curl で 200 が返る」「2回実行して差分が出ない」。曖昧な完了報告にならず、人間は結果を見るだけで済む。</p>
+        <h3>確認の仕方を決めておいた</h3>
+        <p>「テストが通る」「curlで200が返る」みたいに決めておくと、報告があいまいにならないので、こっちは結果を見るだけで済みました</p>
       </div>
       <div class="block">
-        <h3>1日で本番まで到達した</h3>
-        <p>要件を聞くところから、ドメインを付けて公開するところまで。土日の空き時間で終わる規模になった。</p>
+        <h3>1日で公開までいけた</h3>
+        <p>質問に答えるところから、ドメインを付けて公開するところまで。休みの日の空いてる時間で終わりました</p>
       </div>
       <div class="block">
-        <h3>面倒な部分こそ任せられた</h3>
-        <p>systemd の unit、バックアップの世代管理、運用手順書。人間だけだと後回しになりがちな部分が最初から揃った。</p>
+        <h3>面倒なところも作ってくれた</h3>
+        <p>systemdの設定とか、バックアップの世代管理とか、運用手順書とか。自分だけだと絶対に後回しにするやつが最初から揃ってます</p>
       </div>
     </div>
   </section>
@@ -642,19 +663,19 @@ data: 1789876712043</pre>
   <!-- 18 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">まとめ</div>
-    <h2>置いてあるだけの iPad が<br>掲示板になった</h2>
+    <h2>置いてあるだけだったiPadが<br>掲示板になりました</h2>
     <div class="cols">
       <div class="block">
-        <h3>使う人</h3>
-        <p>Discord に一言打つだけ。期限が来たら勝手に消える。</p>
+        <h3>使うとき</h3>
+        <p>Discordに一言打つだけ。期限が来たら勝手に消えます</p>
       </div>
       <div class="block">
         <h3>中身</h3>
-        <p>1プロセス、SQLite 1ファイル、ビルドなし。月額0円。</p>
+        <p>1プロセスとSQLiteが1ファイル。ビルドなしで月0円です</p>
       </div>
       <div class="block">
         <h3>作り方</h3>
-        <p>仕様→計画→実装の順に、AI が書いて人間が確認。</p>
+        <p>仕様を決めて、計画を立てて、実装。AIが書いて自分が確認しました</p>
       </div>
     </div>
     <p class="caption">github.com/EngineMaker/signboard &nbsp;·&nbsp; signboard.emaker.dev</p>
