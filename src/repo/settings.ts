@@ -1,0 +1,77 @@
+import type { DB } from '../db/index.ts';
+
+/**
+ * 掲示板の表示設定（SPEC §2.3）。
+ * 管理画面から変更でき、iPad の表示に反映される。
+ */
+export interface Settings {
+  /** 横スクロールの速度（px/秒） */
+  scrollSpeed: number;
+  /** 文字サイズ（画面高さに対する割合 %）。9.7インチでも読める大きさを既定に。 */
+  fontScale: number;
+  /** テーマ。MVP は dark のみ。将来 'led' を追加する余地を残す。 */
+  theme: string;
+  /** お知らせが0件のときに流す文言 */
+  fallbackText: string;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  scrollSpeed: 120,
+  fontScale: 22,
+  theme: 'dark',
+  fallbackText: 'お知らせ募集中',
+};
+
+/**
+ * 設定を取得する。DBに無い項目は既定値で埋める。
+ * 値が壊れていた場合も既定値に倒し、掲示板が落ちないようにする。
+ */
+export function getSettings(db: DB): Settings {
+  const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+
+  const result: Settings = { ...DEFAULT_SETTINGS };
+  for (const row of rows) {
+    if (!(row.key in DEFAULT_SETTINGS)) continue;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.value);
+    } catch {
+      continue; // 壊れた値は無視して既定値のまま。
+    }
+
+    // 既定値と型が一致するものだけ採用する。
+    switch (row.key as keyof Settings) {
+      case 'scrollSpeed':
+        if (typeof parsed === 'number') result.scrollSpeed = parsed;
+        break;
+      case 'fontScale':
+        if (typeof parsed === 'number') result.fontScale = parsed;
+        break;
+      case 'theme':
+        if (typeof parsed === 'string') result.theme = parsed;
+        break;
+      case 'fallbackText':
+        if (typeof parsed === 'string') result.fallbackText = parsed;
+        break;
+    }
+  }
+  return result;
+}
+
+/** 与えられた項目だけ更新し、更新後の全設定を返す。 */
+export function updateSettings(db: DB, patch: Partial<Settings>, now = Date.now()): Settings {
+  const stmt = db.prepare(
+    `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  );
+
+  db.transaction(() => {
+    for (const [key, value] of Object.entries(patch)) {
+      if (!(key in DEFAULT_SETTINGS) || value === undefined) continue;
+      stmt.run(key, JSON.stringify(value), now);
+    }
+  })();
+
+  return getSettings(db);
+}

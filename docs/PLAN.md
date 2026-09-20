@@ -122,11 +122,12 @@
 
 **AC**: `npm test` が通る / `curl localhost:3100/healthz` が 200 / CI が green
 
-### Step 2: データモデルと永続化 ★要レビュー
+### Step 2: データモデルと永続化 ★要レビュー ✅ 実装完了・レビュー待ち (2026-09-20)
 
-- [ ] SQLite スキーマ: `notices`, `settings`, `audit_logs`, `api_keys`
-- [ ] マイグレーション適用スクリプト
-- [ ] notices の CRUD 関数 + 有効なお知らせ取得（期限切れ除外、論理削除除外）
+- [x] SQLite スキーマ: `notices`, `settings`, `audit_logs`, `api_keys`
+- [x] マイグレーション適用スクリプト（冪等）
+- [x] notices の CRUD 関数 + 有効なお知らせ取得（期限切れ除外、論理削除除外）
+- [x] settings の取得・更新（壊れた値は既定値に倒す）
 
 **AC**: `npm test` でCRUDと期限切れ除外のユニットテストが通る
 
@@ -213,8 +214,13 @@
 | Step | 状態 |
 |---|---|
 | 1 | ✅ 完了 (2026-09-20) |
-| 2 | 次はここ |
+| 2 | ✅ 実装完了・**レビュー待ち** (2026-09-20) |
 | 3〜10 | 未着手 |
+
+**Step 2 の検証結果**
+- `npm test` — PASS (32 tests: notices 18 / settings 8 / db 5 / healthz 1)
+- `npm run typecheck` — PASS
+- `npm run migrate` を2回連続実行 → 適用済みマイグレーションが増えないことを確認（冪等）
 
 **Step 1 の検証結果**
 - `npm run typecheck` — PASS
