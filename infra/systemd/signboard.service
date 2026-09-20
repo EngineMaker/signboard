@@ -15,6 +15,10 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=%h/apps/signboard
 
+# .env は node 側の --env-file-if-exists が読む（下の ExecStart）。
+# systemd の EnvironmentFile は使わない。値に # や引用符が入ったときの
+# 解釈が node と systemd で違い、片方だけ壊れる事故を避けるため。
+
 # node の場所は環境で変わる（mise / nvm / apt など）。systemd は対話シェルの
 # PATH を引き継がず、かつ ExecStart の「コマンド本体」には環境変数を展開しない
 # （${VAR} を書くと 203/EXEC になる）。そのため setup.sh がこの行を
