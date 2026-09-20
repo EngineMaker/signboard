@@ -77,9 +77,13 @@ export function createApp(db: DB, opts: AppOptions = {}) {
 
     const path = c.req.path;
     if (path.endsWith('.js') || path.endsWith('.css')) {
-      // 内容が変わったら即座に反映したい。更新の頻度は低いので
-      // 毎回取りに来ても負荷にならない。
-      c.header('Cache-Control', 'no-cache, must-revalidate');
+      /*
+       * no-store にする。no-cache だと Cloudflare 側の Browser Cache TTL
+       * （既定4時間）が残り、古いファイルが配られ続けた。
+       * no-store はキャッシュ自体を禁じるので設定に上書きされない。
+       * ファイルは数十KBで更新も稀なため、毎回取得させても問題ない。
+       */
+      c.header('Cache-Control', 'no-store');
     } else if (path.endsWith('.mp4') || path.endsWith('.png') || path.endsWith('.jpg')) {
       // 画像や動画は差し替えの頻度がさらに低く、容量が大きいので長めに持たせる
       c.header('Cache-Control', 'public, max-age=86400');
