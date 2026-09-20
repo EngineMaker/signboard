@@ -91,8 +91,15 @@ h1 {
   font-size: clamp(38px, 6.4vw, 88px);
   line-height: 1.15;
   margin: 0;
-  text-wrap: balance;
   letter-spacing: 0.02em;
+  /*
+   * 日本語は単語の間に空白が無いので、放っておくと「けっこ / う小さい」のように
+   * 語の途中で折り返される。word-break: keep-all で文節を保ち、
+   * overflow-wrap で、それでも収まらない長い語だけは折り返せるようにする。
+   * text-wrap: balance は行長を揃えるだけで語の切れ目を見ないため使わない。
+   */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 h2 {
@@ -100,7 +107,9 @@ h2 {
   font-size: clamp(27px, 3.9vw, 50px);
   line-height: 1.25;
   margin: 0;
-  text-wrap: balance;
+  /* h1 と同じ理由。日本語を語の途中で割らない */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .lede {
@@ -347,6 +356,15 @@ li strong { color: var(--ink); font-weight: 500; }
   .slide { gap: 20px; padding-top: 5vh; }
   /* コードを2つ載せる枚（SSE の余談）は狭い画面で詰める */
   pre { line-height: 1.5; padding: 12px; }
+
+  /*
+   * 狭い画面では見出しを小さくする。大きいままだと「ます」だけの行が
+   * できて読みにくい。発表は PC の全画面なので、ここは確認用の見やすさを取る。
+   */
+  h1 { font-size: 30px; }
+  h2 { font-size: 22px; }
+  .slide[data-tone="lead"] h1,
+  .slide[data-tone="lead"] h2 { font-size: 30px; }
   .versus .after { border-left: none; border-top: 2px solid var(--led); padding-left: 0; padding-top: 16px; }
 }
 </style>
@@ -444,7 +462,7 @@ li strong { color: var(--ink); font-weight: 500; }
   <!-- 7 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">ここから中身の話</div>
-    <h2>中身はけっこう小さいです</h2>
+    <h2>中身はけっこう<br>小さいです</h2>
     <div class="figures">
       <div class="figure"><span class="n">1</span><span class="l">プロセス</span></div>
       <div class="figure"><span class="n">1</span><span class="l">ファイルのDB</span></div>
@@ -566,7 +584,7 @@ data: 1789876712043</pre>
   <!-- 13 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">ここから作り方の話</div>
-    <h2>コードはほぼ全部<br>AIに書いてもらいました</h2>
+    <h2>コードはほぼ全部<br>AIに<br>書いてもらいました</h2>
     <p class="lede">自分がやったのは、聞かれたことに答えて、方針を決めて、区切りごとに「いいよ」と言うくらいでした</p>
   </section>
 
@@ -663,7 +681,7 @@ data: 1789876712043</pre>
   <!-- 18 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">まとめ</div>
-    <h2>置いてあるだけだったiPadが<br>掲示板になりました</h2>
+    <h2>置いてあるだけだった<br>iPadが掲示板に<br>なりました</h2>
     <div class="cols">
       <div class="block">
         <h3>使うとき</h3>
