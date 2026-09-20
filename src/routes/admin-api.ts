@@ -8,6 +8,7 @@ import { getSettings, DEFAULT_SETTINGS, type Settings } from '../repo/settings.t
 import { createNotice, deleteNotice, updateNotice } from '../service/notices.ts';
 import { updateSettings } from '../service/settings.ts';
 import type { AuditAction } from '../db/schema.ts';
+import type { EventBus } from '../events/bus.ts';
 
 /** 本文の上限（TBD-4）。電光掲示板を一周するのに長すぎない範囲。 */
 export const MAX_BODY_LENGTH = 200;
@@ -33,17 +34,18 @@ function clientIp(c: Ctx): string | null {
   return c.req.header('x-real-ip') ?? null;
 }
 
-/** 操作の文脈（誰が・どこから）。監査ログに載る。 */
-function context(c: Ctx) {
+/** 操作の文脈（誰が・どこから）。監査ログに載り、変更は SSE で配られる。 */
+function context(c: Ctx, events?: EventBus) {
   const session = c.get('session');
   return {
     actor: { id: session.userId, name: session.userName },
     source: 'web' as const,
     ip: clientIp(c),
+    events,
   };
 }
 
-export function adminApiRoutes(db: DB, auth: AuthConfig) {
+export function adminApiRoutes(db: DB, auth: AuthConfig, events?: EventBus) {
   const app = new Hono<{ Variables: AuthVars }>();
 
   // 以降すべてログイン必須
@@ -65,7 +67,7 @@ export function adminApiRoutes(db: DB, auth: AuthConfig) {
     const notice = createNotice(
       db,
       { body: (body as { body: string }).body.trim(), expiresAt: (body as { expiresAt?: number }).expiresAt },
-      context(c),
+      context(c, events),
     );
     return c.json({ notice }, 201);
   });
@@ -83,7 +85,7 @@ export function adminApiRoutes(db: DB, auth: AuthConfig) {
       db,
       id,
       { body: input.body?.trim(), expiresAt: input.expiresAt },
-      context(c),
+      context(c, events),
     );
     if (!notice) return c.json({ error: 'お知らせが見つかりません' }, 404);
 
@@ -94,7 +96,7 @@ export function adminApiRoutes(db: DB, auth: AuthConfig) {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id)) return c.json({ error: 'ID が不正です' }, 400);
 
-    const notice = deleteNotice(db, id, context(c));
+    const notice = deleteNotice(db, id, context(c, events));
     if (!notice) return c.json({ error: 'お知らせが見つかりません' }, 404);
 
     return c.json({ notice });
@@ -147,7 +149,7 @@ export function adminApiRoutes(db: DB, auth: AuthConfig) {
       return c.json({ error: '変更する項目がありません' }, 400);
     }
 
-    return c.json({ settings: updateSettings(db, patch, context(c)) });
+    return c.json({ settings: updateSettings(db, patch, context(c, events)) });
   });
 
   app.get('/settings/defaults', (c) => c.json({ defaults: DEFAULT_SETTINGS }));

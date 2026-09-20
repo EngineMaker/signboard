@@ -10,7 +10,7 @@ export function updateSettings(
   ctx: Context,
   now = Date.now(),
 ): Settings {
-  return db.transaction(() => {
+  const { after, changed } = db.transaction(() => {
     const before = getSettings(db);
     const after = repoUpdate(db, patch, now);
 
@@ -36,6 +36,10 @@ export function updateSettings(
       );
     }
 
-    return after;
+    return { after, changed };
   })();
+
+  // 設定が実際に変わったときだけ配信する
+  if (changed.length > 0) ctx.events?.emit('settings-changed');
+  return after;
 }

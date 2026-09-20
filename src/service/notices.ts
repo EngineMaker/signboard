@@ -1,5 +1,6 @@
 import type { DB } from '../db/index.ts';
 import type { NoticeRow, Source } from '../db/schema.ts';
+import type { EventBus } from '../events/bus.ts';
 import { recordAudit, type Actor } from '../repo/audit.ts';
 import {
   createNotice as repoCreate,
@@ -20,6 +21,8 @@ export interface Context {
   actor: Actor;
   source: Source;
   ip?: string | null;
+  /** 変更を SSE で配るためのバス。省略時は配信しない（テストや CLI 用）。 */
+  events?: EventBus;
 }
 
 /** 監査ログに載せるお知らせのスナップショット。 */
@@ -44,7 +47,7 @@ export function createNotice(
   ctx: Context,
   now = Date.now(),
 ): NoticeRow {
-  return db.transaction(() => {
+  const notice = db.transaction(() => {
     const notice = repoCreate(
       db,
       {
@@ -73,6 +76,17 @@ export function createNotice(
 
     return notice;
   })();
+
+  notify(ctx);
+  return notice;
+}
+
+/**
+ * 変更をリアルタイムに配る。トランザクションの外で呼ぶこと
+ * （コミット前に通知すると、受け手が古い内容を読んでしまう）。
+ */
+function notify(ctx: Context): void {
+  ctx.events?.emit('notices-changed');
 }
 
 export function updateNotice(
@@ -82,7 +96,7 @@ export function updateNotice(
   ctx: Context,
   now = Date.now(),
 ): NoticeRow | undefined {
-  return db.transaction(() => {
+  const result = db.transaction(() => {
     const before = getNotice(db, id);
     if (!before || before.deleted_at !== null) return undefined;
 
@@ -106,6 +120,9 @@ export function updateNotice(
 
     return after;
   })();
+
+  if (result) notify(ctx);
+  return result;
 }
 
 export function deleteNotice(
@@ -114,7 +131,7 @@ export function deleteNotice(
   ctx: Context,
   now = Date.now(),
 ): NoticeRow | undefined {
-  return db.transaction(() => {
+  const result = db.transaction(() => {
     const before = getNotice(db, id);
     if (!before || before.deleted_at !== null) return undefined;
 
@@ -138,4 +155,7 @@ export function deleteNotice(
 
     return after;
   })();
+
+  if (result) notify(ctx);
+  return result;
 }

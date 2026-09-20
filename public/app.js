@@ -8,9 +8,14 @@
 'use strict';
 
 var CACHE_KEY = 'signboard.cache.v1';
-var POLL_INTERVAL_MS = 30000;
+/** SSE が生きているときの保険のポーリング間隔 */
+var POLL_INTERVAL_SSE_MS = 300000;
+/** SSE が使えないときのポーリング間隔 */
+var POLL_INTERVAL_FALLBACK_MS = 30000;
 /** この時間だけ取得できなければ「オフライン」と見なす */
 var STALE_THRESHOLD_MS = 90000;
+/** 再接続の待ち時間（指数バックオフの上限） */
+var RECONNECT_MAX_MS = 30000;
 
 var els = {
   date: document.getElementById('date'),
@@ -22,6 +27,12 @@ var els = {
 
 /** 直近で取得に成功した時刻。null なら一度も成功していない。 */
 var lastFetchOk = null;
+/** SSE の接続。null なら未接続。 */
+var eventSource = null;
+/** 再接続の待ち時間。失敗するたびに伸ばす。 */
+var reconnectDelay = 1000;
+/** ポーリングのタイマー。SSE の状態に応じて間隔を変える。 */
+var pollTimer = null;
 /** 表示中の内容。差分がなければ DOM に触らずアニメーションを途切れさせない。 */
 var renderedKey = '';
 
@@ -189,6 +200,57 @@ function fetchNotices() {
     });
 }
 
+// ---- リアルタイム更新 (SSE) ----
+
+/**
+ * サーバーから「変わった」合図を受け取る。
+ * 中身は送られてこないので、合図を受けたら通常の取得を走らせる。
+ *
+ * EventSource は iPadOS 16 の Safari でも使える。
+ * 切れたら自動再接続するが、サーバー停止時に無駄な再試行を重ねないよう
+ * 自前でバックオフを入れ、その間はポーリングで凌ぐ。
+ */
+function connectStream() {
+  if (!window.EventSource) return; // 念のため。使えなければポーリングのみ
+
+  try {
+    eventSource = new EventSource('/api/stream');
+  } catch (e) {
+    setPollInterval(POLL_INTERVAL_FALLBACK_MS);
+    return;
+  }
+
+  eventSource.addEventListener('connected', function () {
+    reconnectDelay = 1000;
+    // SSE が生きている間はポーリングを緩める（保険として残す）
+    setPollInterval(POLL_INTERVAL_SSE_MS);
+  });
+
+  ['notices-changed', 'settings-changed'].forEach(function (name) {
+    eventSource.addEventListener(name, function () {
+      fetchNotices();
+    });
+  });
+
+  eventSource.onerror = function () {
+    // EventSource は自動再接続するが、サーバーが落ちている間は
+    // ポーリングに戻しておく（そちらがキャッシュ表示の維持も担う）。
+    setPollInterval(POLL_INTERVAL_FALLBACK_MS);
+
+    if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+      eventSource = null;
+      setTimeout(connectStream, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 2, RECONNECT_MAX_MS);
+    }
+  };
+}
+
+/** ポーリング間隔を切り替える。 */
+function setPollInterval(ms) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(fetchNotices, ms);
+}
+
 // ---- 起動 ----
 
 function start() {
@@ -203,14 +265,22 @@ function start() {
   renderStatus();
 
   fetchNotices();
-  setInterval(fetchNotices, POLL_INTERVAL_MS);
+  setPollInterval(POLL_INTERVAL_FALLBACK_MS);
   setInterval(renderStatus, 10000);
+  connectStream();
 
-  // 画面復帰時（スリープ明け）は即座に取り直す
+  // 画面復帰時（スリープ明け）は即座に取り直す。
+  // スリープ中に SSE が切れていることが多いので、繋ぎ直しも試みる。
   document.addEventListener('visibilitychange', function () {
-    if (!document.hidden) fetchNotices();
+    if (document.hidden) return;
+    fetchNotices();
+    if (!eventSource) connectStream();
   });
-  window.addEventListener('online', fetchNotices);
+
+  window.addEventListener('online', function () {
+    fetchNotices();
+    if (!eventSource) connectStream();
+  });
 
   // 画面回転などで幅が変わったらスクロール時間を測り直す
   window.addEventListener('resize', function () {

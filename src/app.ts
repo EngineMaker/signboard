@@ -4,6 +4,8 @@ import type { DB } from './db/index.ts';
 import type { AuthConfig } from './config.ts';
 import { requireAuth, type AuthVars } from './auth/middleware.ts';
 import { apiRoutes } from './routes/api.ts';
+import { streamRoutes } from './routes/stream.ts';
+import { EventBus } from './events/bus.ts';
 import { adminApiRoutes } from './routes/admin-api.ts';
 import { authRoutes } from './routes/auth.ts';
 import { getCookie } from 'hono/cookie';
@@ -13,6 +15,8 @@ import { SESSION_COOKIE } from './auth/middleware.ts';
 export interface AppOptions {
   auth?: AuthConfig;
   baseUrl?: string;
+  /** 省略時は内部で作る。テストから発火を観測したい場合に渡す。 */
+  events?: EventBus;
 }
 
 /**
@@ -21,10 +25,12 @@ export interface AppOptions {
  */
 export function createApp(db: DB, opts: AppOptions = {}) {
   const app = new Hono<{ Variables: AuthVars }>();
+  const events = opts.events ?? new EventBus();
 
   app.get('/healthz', (c) => c.json({ status: 'ok' }));
 
   app.route('/api', apiRoutes(db));
+  app.route('/api', streamRoutes(events));
 
   if (opts.auth) {
     const auth = opts.auth;
@@ -36,7 +42,7 @@ export function createApp(db: DB, opts: AppOptions = {}) {
       return c.json({ userId: session.userId, userName: session.userName });
     });
 
-    app.route('/api/admin', adminApiRoutes(db, auth));
+    app.route('/api/admin', adminApiRoutes(db, auth, events));
 
     // 管理画面の HTML 自体もログイン必須にする。
     // 未ログインはログインへ送る（API と違い 401 を返しても人間には不親切なため）。
