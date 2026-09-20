@@ -1,6 +1,6 @@
 # PLAN: 開発手法と技術選定
 
-> ステータス: **フェーズ2 承認待ち**
+> ステータス: **フェーズ2 承認済み (2026-09-20)**
 > 最終更新: 2026-09-20
 > 前提: [SPEC.md](./SPEC.md) フェーズ1承認済み
 
@@ -48,6 +48,33 @@
 - 公開: **Cloudflare Tunnel** → `signboard.emaker.dev`
 - プロセス管理: **systemd user unit**（sudo不要で `systemctl --user` で完結、lingering有効化のみ要確認）
 
+### 1.3 インフラのコード化
+
+インフラもリポジトリで管理する。ただし1台に1アプリの規模なので Terraform / Ansible は過剰。
+**宣言的な設定ファイル + 冪等な bash スクリプト**で揃える。
+
+`infra/` に置くもの:
+
+| ファイル | 内容 | 適用方法 |
+|---|---|---|
+| `infra/systemd/signboard.service` | systemd **user** unit（自動起動・異常時再起動） | `infra/setup.sh` が配置 |
+| `infra/cloudflared/config.yml` | Tunnel のルーティング定義（`signboard.emaker.dev` → `localhost:3100`） | 同上 |
+| `infra/cloudflared/signboard-tunnel.service` | cloudflared の user unit | 同上 |
+| `infra/backup/backup.sh` | SQLite の日次バックアップ（`VACUUM INTO` で安全に取得、世代管理） | cron から実行 |
+| `infra/backup/signboard-backup.{service,timer}` | バックアップ用 systemd timer（cron より時刻が正確） | `infra/setup.sh` が配置 |
+| `infra/setup.sh` | 上記を配置して有効化する**冪等**なスクリプト。何度流しても同じ状態になる | `bash infra/setup.sh` |
+| `infra/preflight.sh` | 適用前の前提チェック（Node版・ポート空き・lingering有効・cloudflared有無） | `bash infra/preflight.sh` |
+| `.env.example` | 必要な環境変数の一覧（実値はコミットしない） | 手動コピー |
+
+方針:
+
+- **sudo を要求しない**構成にする（systemd **user** unit + `loginctl enable-linger`）。SPEC §2.8 の「sudo はパスワード必須」を回避できる
+- スクリプトは `set -euo pipefail` + 冪等。既に正しい状態なら何もしない
+- シークレット（Discord トークン・Tunnel 認証情報）は**コミットしない**。`.env.example` に名前だけ置く
+- 手順書 `docs/OPERATIONS.md` は「スクリプトが何をするか」と**手動介入が必要な部分だけ**を記す（Cloudflare 側のトークン発行など、どうしてもブラウザ操作が要る箇所）
+
+**コード化できない残り**: Cloudflare ダッシュボードでの Tunnel 作成とトークン発行、Discord Developer Portal での Bot 登録。これらは `docs/OPERATIONS.md` に手順として残す。
+
 ## 2. 開発手法
 
 ### 2.1 原則
@@ -65,7 +92,8 @@
 | `docs/SPEC.md` | 何を作るか（フェーズ1成果物・確定済み） |
 | `docs/PLAN.md` | どう作るか・進捗（本ファイル） |
 | `docs/DECISIONS.md` | 実装中に決めたことの記録（ADR形式の軽量版） |
-| `docs/OPERATIONS.md` | デプロイ・バックアップ・復旧の手順（ステップ9で作成） |
+| `docs/OPERATIONS.md` | デプロイ・バックアップ・復旧の手順、手動介入が必要な箇所（ステップ9で作成） |
+| `infra/` | インフラ定義一式（§1.3） |
 | `README.md` | セットアップ手順 |
 
 ### 2.3 レビューのポイント
@@ -156,14 +184,22 @@
 
 **AC**: `curl -H "Authorization: Bearer $KEY" ...` で投稿でき、無効キーは401 / DB内に平文キーが存在しないことをテストで検証
 
-### Step 9: デプロイと運用 ★要レビュー
+### Step 9: インフラのコード化とデプロイ ★要レビュー
 
-- [ ] systemd user unit（自動起動・自動再起動）
+- [ ] `infra/` 一式を作成（§1.3 の表のとおり）
+- [ ] `infra/preflight.sh` — 適用前チェック
+- [ ] `infra/setup.sh` — 冪等なセットアップ（sudo不要）
+- [ ] systemd user unit で常駐（自動起動・異常時再起動）
 - [ ] Cloudflare Tunnel で `signboard.emaker.dev` を公開
-- [ ] SQLite の日次バックアップ（cron）
-- [ ] `docs/OPERATIONS.md` に手順を記載
+- [ ] SQLite 日次バックアップ（systemd timer、`VACUUM INTO` で世代管理）
+- [ ] `docs/OPERATIONS.md`（手動介入が必要な箇所・復旧手順・ロールバック）
 
-**AC**: `curl https://signboard.emaker.dev/healthz` が 200 / サーバー再起動後に自動復帰することを確認 / バックアップファイルが生成されることを確認
+**AC**:
+- `bash infra/preflight.sh` が全項目 PASS
+- `bash infra/setup.sh` を**2回連続実行しても差分が出ない**（冪等性の確認）
+- `curl https://signboard.emaker.dev/healthz` が 200
+- サーバー再起動後に自動復帰する（`systemctl --user is-active signboard` が active）
+- バックアップを手動トリガして復元でき、復元したDBでアプリが起動する
 
 ### Step 10（MVP後）: 拡張
 
@@ -181,3 +217,4 @@
 ## 5. 変更履歴
 
 - 2026-09-20: 初版作成
+- 2026-09-20: インフラのコード化方針(§1.3)を追加、Step 9 を拡充。**ユーザー承認取得、フェーズ2確定**
