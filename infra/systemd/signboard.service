@@ -15,12 +15,13 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=%h/apps/signboard
 
-# node の場所は環境で変わる（mise / nvm / apt など）。
-# systemd は対話シェルの PATH を引き継がないため、setup.sh が実行時に
-# 検出した絶対パスを %h/.config/systemd/user/signboard.env に書き出す。
-# ここが古い node を指すと --experimental-strip-types が使えず起動に失敗する。
-EnvironmentFile=%h/.config/systemd/user/signboard.env
-ExecStart=${NODE_BIN} --env-file-if-exists=.env --experimental-strip-types src/server.ts
+# node の場所は環境で変わる（mise / nvm / apt など）。systemd は対話シェルの
+# PATH を引き継がず、かつ ExecStart の「コマンド本体」には環境変数を展開しない
+# （${VAR} を書くと 203/EXEC になる）。そのため setup.sh がこの行を
+# 検出した絶対パスで書き換えてから配置する。@NODE_BIN@ はその差し込み口。
+#
+# 直接 systemctl --user edit で書き換えず、setup.sh を流し直すこと。
+ExecStart=@NODE_BIN@ --env-file-if-exists=.env --experimental-strip-types src/server.ts
 
 # 落ちたら起こし直す。掲示板は常時表示が前提のため。
 Restart=always

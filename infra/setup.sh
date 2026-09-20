@@ -79,23 +79,19 @@ fi
 
 log "$NODE_BIN ($(node --version))"
 
-node_env="$UNIT_DIR/signboard.env"
-mkdir -p "$UNIT_DIR"
-tmp_env="$(mktemp)"
-printf 'NODE_BIN=%s\n' "$NODE_BIN" > "$tmp_env"
-if [[ -f "$node_env" ]] && cmp -s "$tmp_env" "$node_env"; then
-  log "変更なし: $node_env"
-  rm -f "$tmp_env"
-else
-  mv "$tmp_env" "$node_env"
-  log "記録: $node_env"
-  changed_node=1
-fi
-
 step "5. systemd unit"
 
-changed=${changed_node:-0}
-install_file "$APP_DIR/infra/systemd/signboard.service" "$UNIT_DIR/signboard.service" && changed=1
+changed=0
+
+# ExecStart のコマンド本体には環境変数が展開されないため、
+# node の絶対パスをここで埋め込む。
+rendered_unit="$(mktemp)"
+sed "s#@NODE_BIN@#${NODE_BIN}#" "$APP_DIR/infra/systemd/signboard.service" > "$rendered_unit"
+install_file "$rendered_unit" "$UNIT_DIR/signboard.service" && changed=1
+rm -f "$rendered_unit"
+
+# 旧版が残していた環境ファイルは不要（誤解を招くので消す）
+rm -f "$UNIT_DIR/signboard.env"
 install_file "$APP_DIR/infra/backup/signboard-backup.service" "$UNIT_DIR/signboard-backup.service" && changed=1
 install_file "$APP_DIR/infra/backup/signboard-backup.timer" "$UNIT_DIR/signboard-backup.timer" && changed=1
 
