@@ -1,0 +1,42 @@
+# signboard を systemd の user unit として常駐させる。
+# user unit にすることで sudo なしで導入・更新できる（SPEC §2.8: sudo はパスワード必須）。
+#
+# 配置先: ~/.config/systemd/user/signboard.service
+# 有効化: systemctl --user enable --now signboard
+# ログ:   journalctl --user -u signboard -f
+
+[Unit]
+Description=signboard - シェアハウスの電光掲示板
+Documentation=https://github.com/EngineMaker/signboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/apps/signboard
+EnvironmentFile=%h/apps/signboard/.env
+ExecStart=/usr/bin/env node --env-file-if-exists=.env --experimental-strip-types src/server.ts
+
+# 落ちたら起こし直す。掲示板は常時表示が前提のため。
+Restart=always
+RestartSec=5
+
+# 起動に繰り返し失敗しても諦めない（サーバー再起動直後にネットワークが
+# 整わず失敗することがあるため、回数制限を緩めておく）
+StartLimitBurst=10
+StartLimitIntervalSec=120
+
+# SIGTERM で Bot の切断と DB のクローズを行う（src/server.ts の shutdown）
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=signboard
+
+# 最低限の保護。user unit なので効く範囲は限られるが、入れておいて損はない。
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

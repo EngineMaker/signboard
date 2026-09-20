@@ -1,0 +1,20 @@
+# 毎日のバックアップ。
+#
+# cron ではなく systemd timer を使う理由:
+# ユーザーが「GitHub Actions は起動時刻が安定しない」と挙げていた点に応え、
+# 指定時刻に確実に動くものを選ぶ。Persistent=true により、実行時刻に
+# サーバーが落ちていても次回起動時に取り返す（このマシンは常時稼働ではない）。
+#
+# 配置先: ~/.config/systemd/user/signboard-backup.timer
+
+[Unit]
+Description=signboard のバックアップを毎日実行
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Persistent=true
+# 複数のタイマーが同時に走らないよう少しばらす
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+# バックアップの実行本体。タイマーから起動される。
+# 配置先: ~/.config/systemd/user/signboard-backup.service
+
+[Unit]
+Description=signboard のバックアップ
+Documentation=https://github.com/EngineMaker/signboard
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env bash %h/apps/signboard/infra/backup/backup.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=signboard-backup

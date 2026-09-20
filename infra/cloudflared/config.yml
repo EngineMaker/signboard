@@ -1,0 +1,22 @@
+# Cloudflare Tunnel の設定。
+# NAT 配下（SPEC §2.8: 192.168.1.113）のためポート開放せず外部公開する。
+#
+# 配置先: ~/.cloudflared/config.yml
+# トンネルの作成と認証情報の取得は手動（docs/OPERATIONS.md 参照）。
+
+tunnel: signboard
+credentials-file: /home/mktoho/.cloudflared/signboard.json
+
+ingress:
+  - hostname: signboard.emaker.dev
+    service: http://localhost:3100
+    originRequest:
+      # SSE を途中で切られないようにする。
+      # 既定のタイムアウトだとストリームが定期的に切断される。
+      noTLSVerify: false
+      connectTimeout: 30s
+      # レスポンス全体のバッファリングを無効化（SSE に必須）
+      disableChunkedEncoding: false
+
+  # 上記に一致しないリクエストは 404
+  - service: http_status:404

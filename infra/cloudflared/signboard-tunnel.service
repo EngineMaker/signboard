@@ -1,0 +1,21 @@
+# Cloudflare Tunnel を systemd の user unit として常駐させる。
+# 配置先: ~/.config/systemd/user/signboard-tunnel.service
+
+[Unit]
+Description=Cloudflare Tunnel for signboard
+Documentation=https://github.com/EngineMaker/signboard
+After=network-online.target signboard.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/cloudflared tunnel --config %h/.cloudflared/config.yml run
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=signboard-tunnel
+
+[Install]
+WantedBy=default.target
