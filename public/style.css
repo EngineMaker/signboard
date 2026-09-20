@@ -110,3 +110,47 @@ html, body {
 }
 
 #status[hidden] { display: none; }
+
+/* ---- 全画面ボタン（パソコン用） ---- */
+
+/*
+ * ふだんは見えず、マウスを動かしたときだけ薄く出る。
+ * 掲示板は眺めるものなので、操作系が視界に残らないようにする。
+ * iPad は「ホーム画面に追加」で全画面になるため、JS 側で非表示にしている。
+ */
+#fullscreen {
+  position: absolute;
+  right: calc(1.5vw + env(safe-area-inset-right, 0px));
+  top: calc(1.5vh + env(safe-area-inset-top, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease, color 0.2s ease;
+}
+
+#fullscreen[hidden] { display: none; }
+
+/* マウスが動いた直後だけ出す */
+body.is-pointing #fullscreen { opacity: 0.55; }
+
+#fullscreen:hover { color: var(--fg); opacity: 1; }
+
+#fullscreen:focus-visible {
+  opacity: 1;
+  color: var(--fg);
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #fullscreen { transition: none; }
+}

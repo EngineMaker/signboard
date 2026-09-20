@@ -251,6 +251,92 @@ function setPollInterval(ms) {
   pollTimer = setInterval(fetchNotices, ms);
 }
 
+// ---- 全画面表示（パソコン用） ----
+
+/*
+ * iPad は「ホーム画面に追加」で全画面になるので、このボタンは出さない。
+ * 判定は「マウスが使えるか」で行う。タッチ端末では hover が効かないため。
+ */
+function setupFullscreen() {
+  var button = document.getElementById('fullscreen');
+  if (!button) return;
+
+  var canFullscreen = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  var hasMouse = window.matchMedia && window.matchMedia('(hover: hover)').matches;
+
+  // すでに全画面で開いている場合（ホーム画面から起動した iPad など）も出さない
+  var standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+
+  if (!canFullscreen || !hasMouse || standalone) return;
+
+  button.hidden = false;
+
+  button.addEventListener('click', toggleFullscreen);
+
+  // マウスを動かしたときだけ表示し、しばらく止まったら消す
+  var hideTimer = null;
+  document.addEventListener('mousemove', function () {
+    document.body.classList.add('is-pointing');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function () {
+      document.body.classList.remove('is-pointing');
+    }, 2500);
+  });
+
+  // f キーでも切り替えられる
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleFullscreen();
+    }
+  });
+
+  // 状態が変わったらアイコンを入れ替える
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (name) {
+    document.addEventListener(name, updateFullscreenIcon);
+  });
+}
+
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function toggleFullscreen() {
+  var el = document.documentElement;
+  if (isFullscreen()) {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document);
+  } else {
+    var request = el.requestFullscreen || el.webkitRequestFullscreen;
+    // ブラウザに拒否されることがあるので、失敗しても画面は壊さない
+    if (request) {
+      try {
+        var result = request.call(el);
+        if (result && result.catch) result.catch(function () {});
+      } catch (e) { /* 無視 */ }
+    }
+  }
+}
+
+function updateFullscreenIcon() {
+  var icon = document.getElementById('fs-icon');
+  var button = document.getElementById('fullscreen');
+  if (!icon || !button) return;
+
+  if (isFullscreen()) {
+    // 内向きの矢印（戻す）
+    icon.setAttribute('d', 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5');
+    button.setAttribute('aria-label', '全画面表示をやめる');
+    button.setAttribute('title', '全画面をやめる (f)');
+  } else {
+    // 外向きの矢印（広げる）
+    icon.setAttribute('d', 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5');
+    button.setAttribute('aria-label', '全画面表示にする');
+    button.setAttribute('title', '全画面表示 (f)');
+  }
+}
+
 // ---- 起動 ----
 
 function start() {
@@ -263,6 +349,8 @@ function start() {
     render(cached.data);
   }
   renderStatus();
+
+  setupFullscreen();
 
   fetchNotices();
   setPollInterval(POLL_INTERVAL_FALLBACK_MS);

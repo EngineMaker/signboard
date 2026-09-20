@@ -24,6 +24,15 @@
     </main>
 
     <div id="status" hidden></div>
+
+    <!-- パソコンで見たとき用。iPad は「ホーム画面に追加」で全画面になるので出さない -->
+    <button id="fullscreen" type="button" hidden aria-label="全画面表示にする" title="全画面表示 (f)">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path id="fs-icon" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"
+              d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path>
+      </svg>
+    </button>
   </div>
   <script src="/app.js"></script>
 </body>
