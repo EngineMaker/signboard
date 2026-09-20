@@ -13,11 +13,13 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "migrate": "node --env-file-if-exists=.env --experimental-strip-types src/db/cli.ts"
+    "migrate": "node --env-file-if-exists=.env --experimental-strip-types src/db/cli.ts",
+    "bot:register": "node --env-file-if-exists=.env --experimental-strip-types src/bot/register-cli.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
     "better-sqlite3": "^13.0.3",
+    "discord.js": "^14.27.0",
     "hono": "^4.6.14"
   },
   "devDependencies": {
