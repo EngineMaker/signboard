@@ -125,6 +125,25 @@ bash infra/setup.sh
 
 `setup.sh` は冪等なので、変更がなければ何もしない。
 
+### デプロイ後の確認
+
+**サーバー上のファイルを見るだけでは不十分**。Cloudflare が古いファイルを
+配り続けることがある（D-030）。実際に配信されている内容を確かめる。
+
+```bash
+# 追加した関数名などで、新しいコードが届いているか見る
+curl -s https://signboard.emaker.dev/app.js | grep -c '<追加した関数名>'
+```
+
+0 が返るならキャッシュが残っている。`.js` / `.css` は `no-store` にしてあるので
+新しいデプロイでは起きないが、以前キャッシュされたものが残っている場合は
+Cloudflare ダッシュボードで消す。
+
+1. https://dash.cloudflare.com → `emaker.dev`
+2. Caching → Configuration → **Purge Everything**
+
+放置しても Browser Cache TTL（既定4時間）で自然に消える。
+
 ## 3. 日常の操作
 
 ```bash
