@@ -4,7 +4,11 @@ import type { DB } from './db/index.ts';
 import type { AuthConfig } from './config.ts';
 import { requireAuth, type AuthVars } from './auth/middleware.ts';
 import { apiRoutes } from './routes/api.ts';
+import { adminApiRoutes } from './routes/admin-api.ts';
 import { authRoutes } from './routes/auth.ts';
+import { getCookie } from 'hono/cookie';
+import { decodeSession } from './auth/session.ts';
+import { SESSION_COOKIE } from './auth/middleware.ts';
 
 export interface AppOptions {
   auth?: AuthConfig;
@@ -30,6 +34,24 @@ export function createApp(db: DB, opts: AppOptions = {}) {
     app.get('/api/me', requireAuth(auth), (c) => {
       const session = c.get('session');
       return c.json({ userId: session.userId, userName: session.userName });
+    });
+
+    app.route('/api/admin', adminApiRoutes(db, auth));
+
+    // 管理画面の HTML 自体もログイン必須にする。
+    // 未ログインはログインへ送る（API と違い 401 を返しても人間には不親切なため）。
+    app.get('/admin', (c) => {
+      if (!decodeSession(getCookie(c, SESSION_COOKIE), auth.sessionSecret)) {
+        return c.redirect('/auth/login');
+      }
+      return c.redirect('/admin/');
+    });
+
+    app.use('/admin/*', async (c, next) => {
+      if (!decodeSession(getCookie(c, SESSION_COOKIE), auth.sessionSecret)) {
+        return c.redirect('/auth/login');
+      }
+      await next();
     });
   }
 
