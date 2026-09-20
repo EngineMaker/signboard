@@ -14,8 +14,13 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/apps/signboard
-EnvironmentFile=%h/apps/signboard/.env
-ExecStart=/usr/bin/env node --env-file-if-exists=.env --experimental-strip-types src/server.ts
+
+# node の場所は環境で変わる（mise / nvm / apt など）。
+# systemd は対話シェルの PATH を引き継がないため、setup.sh が実行時に
+# 検出した絶対パスを %h/.config/systemd/user/signboard.env に書き出す。
+# ここが古い node を指すと --experimental-strip-types が使えず起動に失敗する。
+EnvironmentFile=%h/.config/systemd/user/signboard.env
+ExecStart=${NODE_BIN} --env-file-if-exists=.env --experimental-strip-types src/server.ts
 
 # 落ちたら起こし直す。掲示板は常時表示が前提のため。
 Restart=always

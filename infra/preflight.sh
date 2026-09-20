@@ -48,6 +48,18 @@ else
   report "Node.js (>= 22)" "$node_version" no
 fi
 
+# systemd は対話シェルの PATH を引き継がない。mise/nvm の node が
+# /usr/bin の古い node に隠れると、起動時に --experimental-strip-types で落ちる。
+# setup.sh は絶対パスを unit に渡すので実害は無いが、状況を見せておく。
+node_path="$(command -v node 2>/dev/null || echo なし)"
+systemd_node="$(env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  bash -c 'command -v node >/dev/null 2>&1 && node --version' 2>/dev/null || echo なし)"
+if [[ "$systemd_node" != "$node_version" ]]; then
+  printf '  \033[33m--\033[0m   %-36s %s\n' "systemd の PATH で見える node" "$systemd_node（setup.sh が $node_path を使うよう設定します）"
+else
+  printf '  \033[32mOK\033[0m   %-36s %s\n' "systemd の PATH で見える node" "$systemd_node"
+fi
+
 check "npm" command -v npm
 check "git" command -v git
 check "sqlite3（バックアップに必要）" command -v sqlite3

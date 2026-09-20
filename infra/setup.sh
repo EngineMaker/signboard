@@ -65,9 +65,36 @@ step "3. データベース"
 
 npm run migrate 2>&1 | tail -2 | sed 's/^/  /'
 
-step "4. systemd unit"
+step "4. Node の場所を記録"
 
-changed=0
+# systemd は対話シェルの PATH を引き継がない。mise や nvm で入れた node は
+# /usr/bin/node（古いことがある）に隠されるため、絶対パスを unit に渡す。
+NODE_BIN="$(command -v node)"
+node_major="$(node --version | sed -E 's/^v([0-9]+).*/\1/')"
+
+if (( node_major < 22 )); then
+  echo "Node.js 22 以上が必要です（現在: $(node --version) at $NODE_BIN）" >&2
+  exit 1
+fi
+
+log "$NODE_BIN ($(node --version))"
+
+node_env="$UNIT_DIR/signboard.env"
+mkdir -p "$UNIT_DIR"
+tmp_env="$(mktemp)"
+printf 'NODE_BIN=%s\n' "$NODE_BIN" > "$tmp_env"
+if [[ -f "$node_env" ]] && cmp -s "$tmp_env" "$node_env"; then
+  log "変更なし: $node_env"
+  rm -f "$tmp_env"
+else
+  mv "$tmp_env" "$node_env"
+  log "記録: $node_env"
+  changed_node=1
+fi
+
+step "5. systemd unit"
+
+changed=${changed_node:-0}
 install_file "$APP_DIR/infra/systemd/signboard.service" "$UNIT_DIR/signboard.service" && changed=1
 install_file "$APP_DIR/infra/backup/signboard-backup.service" "$UNIT_DIR/signboard-backup.service" && changed=1
 install_file "$APP_DIR/infra/backup/signboard-backup.timer" "$UNIT_DIR/signboard-backup.timer" && changed=1
@@ -85,7 +112,7 @@ if (( changed )); then
   log "daemon-reload 実行"
 fi
 
-step "5. 有効化"
+step "6. 有効化"
 
 enable_unit() {
   local unit="$1"
@@ -102,7 +129,7 @@ enable_unit signboard-backup.timer
 [[ -f "$UNIT_DIR/signboard-tunnel.service" ]] && enable_unit signboard-tunnel.service
 
 if (( START )); then
-  step "6. 起動"
+  step "7. 起動"
 
   systemctl --user restart signboard
   log "signboard を再起動しました"
