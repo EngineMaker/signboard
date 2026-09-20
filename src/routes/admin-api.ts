@@ -4,7 +4,7 @@ import type { AuthConfig } from '../config.ts';
 import { requireAuth, type AuthVars } from '../auth/middleware.ts';
 import { listAuditLogs, countAuditLogs } from '../repo/audit.ts';
 import { getNotice, listNotices } from '../repo/notices.ts';
-import { getSettings, DEFAULT_SETTINGS, type Settings } from '../repo/settings.ts';
+import { getSettings, DEFAULT_SETTINGS, FLASH_STYLES, type Settings } from '../repo/settings.ts';
 import { createNotice, deleteNotice, updateNotice } from '../service/notices.ts';
 import { updateSettings } from '../service/settings.ts';
 import { issueApiKey, revokeApiKey } from '../service/api-keys.ts';
@@ -147,6 +147,14 @@ export function adminApiRoutes(db: DB, auth: AuthConfig, events?: EventBus) {
       patch.fallbackText = v.trim();
     }
 
+    if ('flashStyle' in input) {
+      const v = input.flashStyle;
+      if (typeof v !== 'string' || !(FLASH_STYLES as readonly string[]).includes(v)) {
+        return c.json({ error: '光り方の指定が不正です' }, 400);
+      }
+      patch.flashStyle = v;
+    }
+
     if (Object.keys(patch).length === 0) {
       return c.json({ error: '変更する項目がありません' }, 400);
     }
@@ -155,6 +163,15 @@ export function adminApiRoutes(db: DB, auth: AuthConfig, events?: EventBus) {
   });
 
   app.get('/settings/defaults', (c) => c.json({ defaults: DEFAULT_SETTINGS }));
+
+  /**
+   * 光り方を試す。掲示板を1回光らせるだけで、何も保存しない。
+   * どう見えるかは実物で確かめたほうが早いため。
+   */
+  app.post('/settings/flash-test', (c) => {
+    events?.emit('flash-test');
+    return c.json({ ok: true });
+  });
 
   // ---- API キー ----
 

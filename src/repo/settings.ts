@@ -17,13 +17,22 @@ export interface Settings {
   theme: string;
   /** お知らせが0件のときに流す文言 */
   fallbackText: string;
+  /**
+   * 新着が届いたときの光り方。
+   * 'white'（白で2回）/ 'amber'（琥珀で3回）/ 'fade'（じわっと1回）/ 'off'（光らせない）
+   */
+  flashStyle: string;
 }
+
+/** 選べる光り方。管理画面の選択肢と、検証の両方で使う。 */
+export const FLASH_STYLES = ['white', 'amber', 'fade', 'off'] as const;
 
 export const DEFAULT_SETTINGS: Settings = {
   scrollSpeed: 220,
   fontScale: 12,
   theme: 'dark',
   fallbackText: 'お知らせ募集中',
+  flashStyle: 'white',
 };
 
 /**
@@ -57,6 +66,12 @@ export function getSettings(db: DB): Settings {
         break;
       case 'fallbackText':
         if (typeof parsed === 'string') result.fallbackText = parsed;
+        break;
+      case 'flashStyle':
+        // 知らない値が入っていても既定に倒す。掲示板を壊さないため。
+        if (typeof parsed === 'string' && (FLASH_STYLES as readonly string[]).includes(parsed)) {
+          result.flashStyle = parsed;
+        }
         break;
     }
   }

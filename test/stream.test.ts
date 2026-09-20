@@ -127,6 +127,17 @@ describe('サービス層がイベントを発行する', () => {
   });
 });
 
+describe('光り方のテスト送信', () => {
+  it('flash-test イベントが配られる', () => {
+    const bus = new EventBus();
+    const seen: string[] = [];
+    bus.subscribe((e) => seen.push(e.name));
+
+    bus.emit('flash-test');
+    expect(seen).toEqual(['flash-test']);
+  });
+});
+
 describe('GET /api/stream', () => {
   const auth: AuthConfig = {
     clientId: 'c',

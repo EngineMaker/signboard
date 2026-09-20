@@ -185,6 +185,40 @@ describe('PATCH /api/admin/settings', () => {
   });
 });
 
+describe('光り方の設定', () => {
+  it('選べる値なら保存できる', async () => {
+    for (const style of ['white', 'amber', 'fade', 'off']) {
+      const res = await send('/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({ flashStyle: style }),
+      });
+      expect(res.status).toBe(200);
+    }
+  });
+
+  it('知らない値は 400', async () => {
+    const res = await send('/settings', {
+      method: 'PATCH',
+      body: JSON.stringify({ flashStyle: 'rainbow' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('試してみるは何も保存しない', async () => {
+    const before = (await (await send('/settings')).json()) as { settings: { flashStyle: string } };
+    const res = await send('/settings/flash-test', { method: 'POST' });
+    expect(res.status).toBe(200);
+
+    const after = (await (await send('/settings')).json()) as { settings: { flashStyle: string } };
+    expect(after.settings.flashStyle).toBe(before.settings.flashStyle);
+  });
+
+  it('試してみるは未ログインでは使えない', async () => {
+    const res = await app.request('/api/admin/settings/flash-test', { method: 'POST' });
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('GET /api/admin/audit-logs', () => {
   it('新しい順に返し、種別で絞れる', async () => {
     await post({ body: '1' });

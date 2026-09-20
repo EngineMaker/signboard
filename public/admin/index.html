@@ -89,6 +89,18 @@
           <input type="text" id="fallbackText" maxlength="200">
         </label>
 
+        <div class="field">
+          新しいお知らせが届いたときの光り方
+          <select id="flashStyle">
+            <option value="white">白で2回（既定）</option>
+            <option value="amber">琥珀で3回</option>
+            <option value="fade">じわっと1回</option>
+            <option value="off">光らせない</option>
+          </select>
+          <button type="button" id="flash-test" class="try">試してみる</button>
+          <p class="hint small">リビングのiPadが光ります。選んでから試すと、その光り方で見えます。</p>
+        </div>
+
         <div class="row">
           <button type="submit" class="primary">保存する</button>
           <span id="settings-status" class="status"></span>

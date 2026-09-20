@@ -36,6 +36,24 @@ describe('getSettings', () => {
   });
 });
 
+describe('光り方の設定', () => {
+  it('既定は白で2回', () => {
+    expect(getSettings(db).flashStyle).toBe('white');
+  });
+
+  it('選べる値に変更できる', () => {
+    for (const style of ['amber', 'fade', 'off', 'white']) {
+      expect(updateSettings(db, { flashStyle: style }, T0).flashStyle).toBe(style);
+    }
+  });
+
+  it('知らない値は既定に倒す（掲示板を壊さない）', () => {
+    db.prepare('INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('flashStyle', '"rainbow"', T0);
+    expect(getSettings(db).flashStyle).toBe('white');
+  });
+});
+
 describe('updateSettings', () => {
   it('指定した項目だけ変わる', () => {
     const s = updateSettings(db, { scrollSpeed: 200 }, T0);

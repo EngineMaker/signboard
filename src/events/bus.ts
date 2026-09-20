@@ -5,7 +5,11 @@
  * 書き込みが起きたらサービス層がここに流し、SSE の各接続へ配る。
  */
 
-export type EventName = 'notices-changed' | 'settings-changed';
+export type EventName =
+  | 'notices-changed'
+  | 'settings-changed'
+  /** 管理画面から「試してみる」を押したとき。掲示板を1回光らせるだけ。 */
+  | 'flash-test';
 
 export interface SignboardEvent {
   name: EventName;

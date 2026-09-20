@@ -190,6 +190,7 @@ function loadSettings() {
     document.getElementById('scrollSpeed').value = s.scrollSpeed;
     document.getElementById('fontScale').value = s.fontScale;
     document.getElementById('fallbackText').value = s.fallbackText;
+    document.getElementById('flashStyle').value = s.flashStyle || 'white';
     updateSettingLabels();
   }).catch(function (e) { toast(e.message, true); });
 }
@@ -204,12 +205,28 @@ function setupSettingsForm() {
     document.getElementById(id).addEventListener('input', updateSettingLabels);
   });
 
+  // 実際にリビングのiPadを光らせて確かめる
+  document.getElementById('flash-test').addEventListener('click', function () {
+    var style = document.getElementById('flashStyle').value;
+
+    // 選択中の値で試せるよう、先に保存してから光らせる
+    api('/settings', { method: 'PATCH', body: JSON.stringify({ flashStyle: style }) })
+      .then(function () {
+        return api('/settings/flash-test', { method: 'POST' });
+      })
+      .then(function () {
+        toast(style === 'off' ? '「光らせない」に設定しました' : 'リビングのiPadが光ります');
+      })
+      .catch(function (e) { toast(e.message, true); });
+  });
+
   document.getElementById('settings-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var payload = {
       scrollSpeed: Number(document.getElementById('scrollSpeed').value),
       fontScale: Number(document.getElementById('fontScale').value),
       fallbackText: document.getElementById('fallbackText').value.trim(),
+      flashStyle: document.getElementById('flashStyle').value,
     };
 
     api('/settings', { method: 'PATCH', body: JSON.stringify(payload) })

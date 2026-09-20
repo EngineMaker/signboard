@@ -153,6 +153,76 @@ body.is-new #content { color: var(--new); }
   vertical-align: 0.35em;
 }
 
+/* ---- 新着が届いた瞬間のフラッシュ ---- */
+
+/*
+ * 新着を受け取ったとき、画面全体を一瞬光らせて気づけるようにする。
+ * お知らせの頻度は高くない（1日に数件）ので、これくらいは許容範囲という判断。
+ *
+ * 光るのは画面に重ねた板で、文字の表示はそのまま。
+ * 点滅が終われば通常表示に戻るため、見ていない人には何も残らない。
+ */
+#flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--new);
+  opacity: 0;
+  z-index: 10;
+}
+
+/*
+ * 光り方は管理画面から選べる（設定 flashStyle）。
+ * JS が data-flash 属性を body に付け、ここで切り替える。
+ */
+
+/* 白で2回。既定。暗い部屋でもはっきり分かる */
+body[data-flash="white"] #flash.is-flashing {
+  background: #fff;
+  animation: flash-white 0.9s ease-out;
+}
+
+@keyframes flash-white {
+  0%   { opacity: 0; }
+  6%   { opacity: 0.75; }
+  22%  { opacity: 0; }
+  38%  { opacity: 0.75; }
+  100% { opacity: 0; }
+}
+
+/* 琥珀で3回。掲示板の色に揃えたいとき */
+body[data-flash="amber"] #flash.is-flashing {
+  animation: flash-amber 1.1s ease-out;
+}
+
+@keyframes flash-amber {
+  0%   { opacity: 0; }
+  8%   { opacity: 0.55; }
+  20%  { opacity: 0; }
+  32%  { opacity: 0.55; }
+  44%  { opacity: 0; }
+  56%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+/* じわっと1回。点滅させたくないとき */
+body[data-flash="fade"] #flash.is-flashing {
+  animation: flash-fade 2.2s ease-in-out;
+}
+
+@keyframes flash-fade {
+  0%   { opacity: 0; }
+  30%  { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
+/* off のときは何も起きない（規則を書かないことで実現している） */
+
+/* 光の演出を切っている人には出さない */
+@media (prefers-reduced-motion: reduce) {
+  #flash.is-flashing { animation: none !important; }
+}
+
 /* 新着の間は上下の縁をうっすら光らせる。文字が流れ去っていても状態が残る */
 body.is-new #ticker::before,
 body.is-new #ticker::after {

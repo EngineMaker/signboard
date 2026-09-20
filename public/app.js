@@ -29,6 +29,7 @@ var els = {
   content: document.getElementById('content'),
   status: document.getElementById('status'),
   latest: document.getElementById('latest'),
+  flash: document.getElementById('flash'),
 };
 
 /** 直近で取得に成功した時刻。null なら一度も成功していない。 */
@@ -43,6 +44,13 @@ var pollTimer = null;
 var renderedKey = '';
 /** 新着の表示が切れる時刻。過ぎたら通常表示に戻す。 */
 var newUntil = 0;
+/**
+ * すでに光らせた新着の ID。
+ * 再描画のたびに光ると鬱陶しいので、1件につき1回だけにする。
+ * 起動直後に既存のお知らせで光らないよう、最初の取得では記録だけして光らせない。
+ */
+var flashedIds = {};
+var hasLoadedOnce = false;
 
 // ---- 時計 ----
 
@@ -140,6 +148,11 @@ function applySettings(settings) {
   if (typeof settings.theme === 'string') {
     root.setAttribute('data-theme', settings.theme);
   }
+
+  // 光り方は CSS 側で切り替える
+  if (typeof settings.flashStyle === 'string') {
+    document.body.setAttribute('data-flash', settings.flashStyle);
+  }
 }
 
 /**
@@ -218,6 +231,40 @@ function renderLatestAt(data) {
   el.hidden = false;
 }
 
+/**
+ * 画面を一瞬光らせる。
+ *
+ * 起動直後は光らせない（既にあるお知らせで驚かせないため）。
+ * 同じお知らせで二度光ることもない。
+ */
+function maybeFlash(data) {
+  var fresh = findNewNotice(data, Date.now());
+
+  if (!fresh) return;
+  if (flashedIds[fresh.id]) return;
+
+  flashedIds[fresh.id] = true;
+
+  // 初回の取得では記録だけして光らせない
+  if (!hasLoadedOnce) return;
+
+  var settings = (data && data.settings) || {};
+  if (settings.flashStyle === 'off') return;
+
+  // CSS が見る属性を、描画より先に合わせておく
+  if (typeof settings.flashStyle === 'string') {
+    document.body.setAttribute('data-flash', settings.flashStyle);
+  }
+
+  var el = els.flash;
+  if (!el) return;
+
+  // アニメーションを繰り返せるよう、一度クラスを外して再適用する
+  el.classList.remove('is-flashing');
+  void el.offsetWidth;
+  el.classList.add('is-flashing');
+}
+
 // ---- 状態表示 ----
 
 function renderStatus() {
@@ -265,8 +312,10 @@ function fetchNotices() {
     .then(function (data) {
       lastFetchOk = Date.now();
       writeCache(data);
+      maybeFlash(data);
       render(data);
       renderStatus();
+      hasLoadedOnce = true;
     })
     .catch(function () {
       // 取得できなくても表示は維持する。状態表示だけ更新。
@@ -304,6 +353,22 @@ function connectStream() {
     eventSource.addEventListener(name, function () {
       fetchNotices();
     });
+  });
+
+  // 管理画面から「試してみる」を押されたとき。取得はせず、光らせるだけ。
+  eventSource.addEventListener('flash-test', function () {
+    var cached = readCache();
+    var settings = (cached && cached.data && cached.data.settings) || {};
+    if (settings.flashStyle === 'off') return;
+
+    if (typeof settings.flashStyle === 'string') {
+      document.body.setAttribute('data-flash', settings.flashStyle);
+    }
+    if (els.flash) {
+      els.flash.classList.remove('is-flashing');
+      void els.flash.offsetWidth;
+      els.flash.classList.add('is-flashing');
+    }
   });
 
   eventSource.onerror = function () {

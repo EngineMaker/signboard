@@ -257,3 +257,18 @@ button:disabled { opacity: 0.5; cursor: default; }
   padding: 1px 5px;
   border-radius: 3px;
 }
+
+/* ---- 光り方の設定 ---- */
+
+.field select { margin-top: 6px; }
+
+button.try {
+  margin-top: 10px;
+  font-size: 13px;
+  padding: 7px 14px;
+}
+
+.hint.small {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
