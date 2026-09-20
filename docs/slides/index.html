@@ -68,6 +68,14 @@ body {
   background-image: radial-gradient(circle, var(--led) 1.4px, transparent 1.6px);
 }
 
+/* 余談。本筋から一段引いた扱いにする（点線は控えめ、見出しは小さめ） */
+.slide[data-tone="aside"]::before {
+  background-image: radial-gradient(circle, var(--line) 1.4px, transparent 1.6px);
+}
+
+.slide[data-tone="aside"] .eyebrow { color: var(--cool); }
+.slide[data-tone="aside"] h2 { font-size: clamp(24px, 3.2vw, 40px); }
+
 /* ---- 文字 ---- */
 
 .eyebrow {
@@ -247,6 +255,32 @@ pre .k { color: var(--led); }
 .shot img { display: block; width: 100%; height: auto; }
 
 .caption { font-size: clamp(12px, 1.25vw, 14px); color: var(--ink-dim); font-family: var(--mono); }
+
+/* 手段の比較。行ごとに読ませるので罫線だけで区切る */
+.compare { width: 100%; border-collapse: collapse; font-size: clamp(13px, 1.45vw, 16.5px); }
+
+.compare th, .compare td {
+  text-align: left;
+  padding: clamp(9px, 1.2vw, 14px) clamp(8px, 1.4vw, 18px) clamp(9px, 1.2vw, 14px) 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.compare th {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--ink-dim);
+  font-size: clamp(11px, 1.2vw, 13px);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.compare tbody th { color: var(--led); text-transform: none; letter-spacing: 0; font-size: clamp(13px, 1.4vw, 16px); white-space: nowrap; }
+.compare td { color: var(--ink-dim); }
+.compare tr.pick td, .compare tr.pick th { background: rgba(255, 176, 32, 0.06); }
+.compare tr:last-child th, .compare tr:last-child td { border-bottom: none; }
+
+.table-wrap { overflow-x: auto; }
 
 ul { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 9px; }
 li { line-height: 1.75; font-size: clamp(14px, 1.5vw, 17.5px); color: var(--ink-dim); }
@@ -436,7 +470,66 @@ li strong { color: var(--ink); font-weight: 500; }
     <p>サーバーからは<strong>「変わった」という合図だけ</strong>を送り、中身は送らない。iPad 側が改めて取りに行く。取得経路が1本になるので、再接続してもズレない。</p>
   </section>
 
-  <!-- 10 -->
+  <!-- 10 余談 -->
+  <section class="slide" data-tone="aside">
+    <div class="eyebrow">余談 / Server-Sent Events</div>
+    <h2>SSE は Web 標準。<br>ライブラリも特別なプロトコルも要らない</h2>
+    <div class="cols two">
+      <div class="block">
+        <h3>ブラウザ側</h3>
+        <pre><span class="c">// EventSource は HTML 標準の API</span>
+<span class="k">new</span> EventSource(<span class="c">'/api/stream'</span>)
+  .addEventListener(<span class="c">'notices-changed'</span>, () =&gt; {
+    fetchNotices();
+  });</pre>
+        <p>切断したら<strong>ブラウザが勝手に繋ぎ直す</strong>。自前で書いたのは再接続の間隔調整だけ。</p>
+      </div>
+      <div class="block">
+        <h3>サーバー側が流しているもの</h3>
+        <pre><span class="c">Content-Type: text/event-stream</span>
+
+event: connected
+data: 1789876681067
+
+event: notices-changed
+data: 1789876712043</pre>
+        <p>レスポンスを閉じずにテキストを流し続けるだけ。<strong>ただの HTTP</strong>。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 余談 -->
+  <section class="slide" data-tone="aside">
+    <div class="eyebrow">余談 / なぜ WebSocket ではないのか</div>
+    <h2>一方通行で足りるなら<br>一方通行のものを選ぶ</h2>
+    <div class="table-wrap">
+      <table class="compare">
+        <thead>
+          <tr><th>手段</th><th>向き</th><th>この用途での評価</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>ポーリング</th>
+            <td>都度リクエスト</td>
+            <td>確実だが、30秒間隔だと最悪30秒待たされる。常時表示だと気になる</td>
+          </tr>
+          <tr class="pick">
+            <th>SSE</th>
+            <td>サーバー → ブラウザ</td>
+            <td><strong>採用。</strong>ただの HTTP なので Tunnel もそのまま通る。再接続が標準で付いてくる</td>
+          </tr>
+          <tr>
+            <th>WebSocket</th>
+            <td>双方向</td>
+            <td>今回 iPad からサーバーへ送るものが無い。接続の昇格が要り、経路によっては塞がれる</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dim">iPadOS 16 の Safari でも問題なく動いた。古い端末が対象なので、枯れた標準であることがそのまま利点になった。</p>
+  </section>
+
+  <!-- 12 -->
   <section class="slide">
     <div class="eyebrow">仕組み</div>
     <h2>サーバーが落ちても画面は止めない</h2>
@@ -449,14 +542,14 @@ li strong { color: var(--ink); font-weight: 500; }
     <p class="dim">掲示板が数分止まっても誰も困らない状態にしておく、という方針。</p>
   </section>
 
-  <!-- 11 -->
+  <!-- 13 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">ここから作り方の話</div>
     <h2>AI に実装させて<br>人間がレビューする</h2>
     <p class="lede">コードはほぼ全部 AI が書いた。人間がやったのは、要件を答えること・方針を決めること・各段階で「いいよ」と言うこと。</p>
   </section>
 
-  <!-- 12 -->
+  <!-- 14 -->
   <section class="slide">
     <div class="eyebrow">進め方</div>
     <h2>いきなり実装させない</h2>
@@ -485,7 +578,7 @@ li strong { color: var(--ink); font-weight: 500; }
     </div>
   </section>
 
-  <!-- 13 -->
+  <!-- 15 -->
   <section class="slide">
     <div class="eyebrow">進め方</div>
     <h2>決めたことをリポジトリに残す</h2>
@@ -510,7 +603,7 @@ li strong { color: var(--ink); font-weight: 500; }
     <p><strong>会話が途切れても文脈が消えない。</strong>実際この開発でも、途中で接続が切れたり別の話題を挟んだりしたが、ファイルを読めば続きから再開できた。</p>
   </section>
 
-  <!-- 14 -->
+  <!-- 16 -->
   <section class="slide">
     <div class="eyebrow">やってみて</div>
     <h2>AI が間違えた3か所</h2>
@@ -522,7 +615,7 @@ li strong { color: var(--ink); font-weight: 500; }
     <p class="dim">どれも「書けているか」ではなく「実際に動かしたか」で見つかったもの。受け入れ条件を機械で確認できる形にしておくのが効いた。</p>
   </section>
 
-  <!-- 15 -->
+  <!-- 17 -->
   <section class="slide">
     <div class="eyebrow">やってみて</div>
     <h2>効いたこと</h2>
@@ -546,7 +639,7 @@ li strong { color: var(--ink); font-weight: 500; }
     </div>
   </section>
 
-  <!-- 16 -->
+  <!-- 18 -->
   <section class="slide" data-tone="lead">
     <div class="eyebrow">まとめ</div>
     <h2>置いてあるだけの iPad が<br>掲示板になった</h2>
