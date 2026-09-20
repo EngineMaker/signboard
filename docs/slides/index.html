@@ -1,0 +1,629 @@
+<title>リビングの電光掲示板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/*
+ * 発表スライド。掲示板の実物と同じ配色（黒地＋琥珀のLED）で統一し、
+ * 「これがあの掲示板の話」と説明なしで伝わるようにする。
+ */
+:root {
+  --ground: #0b0b0c;
+  --panel: #131316;
+  --line: #2a2a30;
+  --ink: #f2f0ec;
+  --ink-dim: #9b9aa3;
+  --led: #ffb020;
+  --led-dim: #6b4a15;
+  --cool: #6fb3d2;
+
+  --display: "DotGothic16", "Hiragino Sans", sans-serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Sans", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  overflow: hidden;
+}
+
+/* ---- スライドの器 ---- */
+
+.deck { height: 100%; position: relative; }
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+  padding: 7vh clamp(24px, 7vw, 100px) 10vh;
+  overflow-y: auto;
+}
+
+.slide.is-active { display: flex; }
+
+/* 表紙だけは下寄せ。タイトルが視線の落ちる位置に来る */
+.is-cover { justify-content: flex-end; padding-bottom: 16vh; }
+
+/* 章の区切り：LEDドットの帯を上端に走らせる */
+.slide::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background-image: radial-gradient(circle, var(--led-dim) 1.4px, transparent 1.6px);
+  background-size: 12px 4px;
+}
+
+.slide[data-tone="lead"]::before {
+  background-image: radial-gradient(circle, var(--led) 1.4px, transparent 1.6px);
+}
+
+/* ---- 文字 ---- */
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: clamp(11px, 1.2vw, 14px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--led);
+}
+
+h1 {
+  font-family: var(--display);
+  font-size: clamp(38px, 6.4vw, 88px);
+  line-height: 1.15;
+  margin: 0;
+  text-wrap: balance;
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-family: var(--display);
+  font-size: clamp(27px, 3.9vw, 50px);
+  line-height: 1.25;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.lede {
+  font-size: clamp(16px, 1.9vw, 23px);
+  line-height: 1.75;
+  color: var(--ink-dim);
+  max-width: 42ch;
+}
+
+/*
+ * 表紙と章扉は横に大きく使う。見出しを画面の左半分に閉じ込めると
+ * 右半分が空いて間延びするため、ここだけ字面を大きくする。
+ */
+.slide[data-tone="lead"] h1,
+.slide[data-tone="lead"] h2 {
+  font-size: clamp(44px, 8.2vw, 130px);
+  max-width: 14em;
+}
+
+.slide[data-tone="lead"] .lede { max-width: 34ch; font-size: clamp(17px, 2.1vw, 26px); }
+
+p { margin: 0; line-height: 1.8; font-size: clamp(15px, 1.65vw, 19px); }
+
+strong { color: var(--led); font-weight: 700; }
+
+.dim { color: var(--ink-dim); }
+
+/* ---- 部品 ---- */
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: clamp(16px, 2.4vw, 32px);
+  align-items: start;
+}
+
+.cols.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+.block { display: flex; flex-direction: column; gap: 10px; }
+
+.block h3 {
+  margin: 0;
+  font-size: clamp(15px, 1.7vw, 19px);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.block p { font-size: clamp(14px, 1.45vw, 17px); color: var(--ink-dim); }
+
+/* 問題→解決の対比。左右で扱いを変え、カードを並べない */
+.versus { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(20px, 3vw, 48px); }
+
+.versus .before h3 { color: var(--ink-dim); }
+.versus .before p { text-decoration: line-through; text-decoration-color: var(--line); }
+.versus .after { border-left: 2px solid var(--led); padding-left: clamp(16px, 2vw, 26px); }
+
+/* 経路の一覧。掲示板という一点に集まることを示す */
+.routes { display: flex; flex-direction: column; gap: 14px; }
+
+.route {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: clamp(14px, 2vw, 28px);
+  align-items: baseline;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.route:last-child { border-bottom: none; }
+
+.route-name {
+  font-family: var(--mono);
+  font-size: clamp(13px, 1.4vw, 16px);
+  color: var(--led);
+  font-weight: 700;
+}
+
+.route-desc { font-size: clamp(14px, 1.5vw, 17px); color: var(--ink-dim); }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  color: var(--ink);
+  background: var(--panel);
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+
+pre {
+  font-family: var(--mono);
+  font-size: clamp(12px, 1.25vw, 15px);
+  line-height: 1.7;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: clamp(14px, 1.8vw, 22px);
+  margin: 0;
+  overflow-x: auto;
+  color: var(--ink);
+}
+
+pre .c { color: var(--ink-dim); }
+pre .k { color: var(--led); }
+
+/* 数字を見せる場面（実測値）だけに使う */
+.figures { display: flex; flex-wrap: wrap; gap: clamp(28px, 5vw, 72px); }
+
+.figure { display: flex; flex-direction: column; gap: 4px; }
+
+.figure .n {
+  font-family: var(--mono);
+  font-size: clamp(30px, 4.6vw, 58px);
+  font-weight: 700;
+  color: var(--led);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.figure .l { font-size: clamp(12px, 1.3vw, 15px); color: var(--ink-dim); }
+
+/* 工程の流れ。順序に意味があるのでここだけ番号を振る */
+.phases { display: flex; flex-direction: column; gap: 0; }
+
+.phase {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(16px, 2.2vw, 30px);
+  padding: clamp(12px, 1.6vw, 18px) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.phase:last-child { border-bottom: none; }
+
+.phase-n {
+  font-family: var(--mono);
+  font-size: clamp(12px, 1.3vw, 15px);
+  color: var(--led);
+  padding-top: 0.35em;
+}
+
+.phase h3 { margin: 0 0 4px; font-size: clamp(15px, 1.7vw, 19px); }
+.phase p { font-size: clamp(13.5px, 1.45vw, 16.5px); color: var(--ink-dim); }
+
+.shot {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+  max-width: 100%;
+}
+
+.shot img { display: block; width: 100%; height: auto; }
+
+.caption { font-size: clamp(12px, 1.25vw, 14px); color: var(--ink-dim); font-family: var(--mono); }
+
+ul { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 9px; }
+li { line-height: 1.75; font-size: clamp(14px, 1.5vw, 17.5px); color: var(--ink-dim); }
+li strong { color: var(--ink); font-weight: 500; }
+
+/* ---- 操作まわり ---- */
+
+.bar {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px clamp(16px, 4vw, 40px);
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-dim);
+  background: linear-gradient(to top, var(--ground) 65%, transparent);
+}
+
+.bar-title { letter-spacing: 0.06em; }
+
+.bar nav { display: flex; align-items: center; gap: 10px; }
+
+.bar button {
+  font: inherit;
+  color: var(--ink-dim);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+
+.bar button:hover { color: var(--led); border-color: var(--led-dim); }
+.bar button:focus-visible { outline: 2px solid var(--led); outline-offset: 2px; }
+
+#counter { font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 560px) {
+  .slide { gap: 20px; padding-top: 5vh; }
+  .versus .after { border-left: none; border-top: 2px solid var(--led); padding-left: 0; padding-top: 16px; }
+}
+</style>
+
+<div class="deck" id="deck">
+
+  <!-- 1 -->
+  <section class="slide is-active is-cover" data-tone="lead">
+    <div class="eyebrow">シェアハウスの日曜大工</div>
+    <h1>リビングの<br>電光掲示板</h1>
+    <p class="lede">使っていない iPad を、住人みんなが書き込める掲示板にした話。<br>作ったもの・使い方・中身・AI との作り方。</p>
+    <p class="caption">signboard.emaker.dev</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide">
+    <div class="eyebrow">きっかけ</div>
+    <h2>お知らせを変えるたびに<br>iPad の前まで行くのが面倒</h2>
+    <div class="versus">
+      <div class="block before">
+        <h3>市販の LED バナーアプリ</h3>
+        <p>文字は流せる。ただし内容を変えるには iPad 本体を触るしかない。リビングまで行って、アプリを開いて、キーボードで打ち直す。</p>
+      </div>
+      <div class="block after">
+        <h3>ほしかったもの</h3>
+        <p>自分の部屋から、スマホから、Discord から。<strong>どこにいても書き換えられる</strong>掲示板。iPad は置きっぱなしで触らない。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide">
+    <div class="eyebrow">できたもの</div>
+    <h2>リビングに置きっぱなしの iPad</h2>
+    <div class="shot">
+      <img src="board.png" alt="黒い画面に琥珀色ではなく白い大きな文字で「AIもくもく勉強会 16時から発表」と流れている掲示板。右上に日付と時刻。">
+    </div>
+    <p class="caption">実際の画面。Safari で「ホーム画面に追加」して全画面表示している。</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide">
+    <div class="eyebrow">使い方</div>
+    <h2>書き込む方法は3つ</h2>
+    <div class="routes">
+      <div class="route">
+        <span class="route-name">Discord</span>
+        <span class="route-desc"><code>/signboard post</code> と打つだけ。いちばん手軽で、たぶんこれしか使わない。</span>
+      </div>
+      <div class="route">
+        <span class="route-name">管理画面</span>
+        <span class="route-desc">スマホのブラウザから。一覧・編集・削除と、文字サイズやスクロール速度の調整。</span>
+      </div>
+      <div class="route">
+        <span class="route-name">API</span>
+        <span class="route-desc">自分のスクリプトから叩く用。ゴミ出しの日に自動で流す、みたいな使い方ができる。</span>
+      </div>
+    </div>
+    <p class="dim">どれで書いても同じ掲示板に出る。誰が書いたかは記録に残る。</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide">
+    <div class="eyebrow">使い方</div>
+    <h2>Discord から投稿する</h2>
+    <pre><span class="c"># 24時間表示される（既定）</span>
+/signboard post <span class="k">text:</span>土曜に共用部の大掃除やります。10時集合
+
+<span class="c"># 12時間だけ表示する</span>
+/signboard post <span class="k">text:</span>明日は断水します <span class="k">hours:</span>12
+
+<span class="c"># いま流れているものを確認する</span>
+/signboard list</pre>
+    <p><strong>期限が来たら自動で消える。</strong>古いお知らせが残り続けて、誰も読まない掲示板になるのを防ぐため。</p>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide">
+    <div class="eyebrow">使い方</div>
+    <h2>勝手に書かれないように</h2>
+    <div class="cols two">
+      <div class="block">
+        <h3>書けるのは EM住民ロールを持つ人だけ</h3>
+        <p>Discord のロールをそのまま権限に使っている。新しい住人が入ったらロールを付けるだけ。アカウントを別に作る必要はない。</p>
+      </div>
+      <div class="block">
+        <h3>誰が何をしたか全部残る</h3>
+        <p>投稿・編集・削除・設定変更を記録している。消したお知らせの本文も追える。この記録自体は消せない。</p>
+      </div>
+    </div>
+    <p class="dim">いたずら防止というより、後から「あれ誰が書いたんだっけ」を追えるようにするため。</p>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" data-tone="lead">
+    <div class="eyebrow">ここから中身の話</div>
+    <h2>作りはかなり小さい</h2>
+    <div class="figures">
+      <div class="figure"><span class="n">1</span><span class="l">プロセス</span></div>
+      <div class="figure"><span class="n">1</span><span class="l">ファイルのDB</span></div>
+      <div class="figure"><span class="n">0</span><span class="l">ビルド工程</span></div>
+      <div class="figure"><span class="n">0</span><span class="l">円/月</span></div>
+    </div>
+    <p class="lede">Web サーバーも Discord Bot も同じプロセス。データは SQLite ファイル1個。ハウス内の Ubuntu で動いていて、外部サービスの課金はない。</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide">
+    <div class="eyebrow">技術選定</div>
+    <h2>iPad が古いことから逆算した</h2>
+    <div class="cols two">
+      <div class="block">
+        <h3>制約：iPad Pro 9.7 / iPadOS 16</h3>
+        <p>2016年の機種で、OS はこれ以上上がらない。Safari 16 で動かないものは使えない。メモリ 2GB で、24時間つけっぱなしにする。</p>
+      </div>
+      <div class="block">
+        <h3>選択：フレームワークを使わない</h3>
+        <p>掲示板の画面は素の HTML・CSS・JavaScript。ビルドしないので、<strong>そもそも互換性の問題が起きない</strong>。デプロイも <code>git pull</code> だけで済む。</p>
+      </div>
+    </div>
+    <p class="dim">サーバー側は Node + Hono + SQLite。住人数十人・お知らせ数十件の規模に Postgres は要らない。</p>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide">
+    <div class="eyebrow">仕組み</div>
+    <h2>投稿した瞬間に画面が変わる</h2>
+    <pre>Discord / 管理画面 / API
+        │
+        ↓  書き込み
+   ┌─────────┐
+   │ サーバー │ ── SSE ──→ iPad「変わったよ」
+   └─────────┘                  │
+        ↑                        │
+        └──── 取り直す ←─────────┘</pre>
+    <div class="figures">
+      <div class="figure"><span class="n">147</span><span class="l">ミリ秒で反映（実測）</span></div>
+    </div>
+    <p>サーバーからは<strong>「変わった」という合図だけ</strong>を送り、中身は送らない。iPad 側が改めて取りに行く。取得経路が1本になるので、再接続してもズレない。</p>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide">
+    <div class="eyebrow">仕組み</div>
+    <h2>サーバーが落ちても画面は止めない</h2>
+    <p class="lede">動いているのは GUI も立ち上がっている兼用マシン。自動更新で勝手に再起動することもある。<strong>常時稼働は最初から期待していない。</strong></p>
+    <ul>
+      <li><strong>取得できた内容は iPad 側に保存しておく</strong> ── 通信が切れても最後の内容を流し続ける</li>
+      <li><strong>隅に小さく「オフライン」と出す</strong> ── 古い情報を新鮮な顔で流さない</li>
+      <li><strong>繋ぎ直しは自動</strong> ── サーバーが戻れば勝手に追いつく</li>
+    </ul>
+    <p class="dim">掲示板が数分止まっても誰も困らない状態にしておく、という方針。</p>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide" data-tone="lead">
+    <div class="eyebrow">ここから作り方の話</div>
+    <h2>AI に実装させて<br>人間がレビューする</h2>
+    <p class="lede">コードはほぼ全部 AI が書いた。人間がやったのは、要件を答えること・方針を決めること・各段階で「いいよ」と言うこと。</p>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide">
+    <div class="eyebrow">進め方</div>
+    <h2>いきなり実装させない</h2>
+    <div class="phases">
+      <div class="phase">
+        <span class="phase-n">01</span>
+        <div>
+          <h3>要件を聞かせる</h3>
+          <p>一度に3〜5問まで、何往復かに分けて。答えを SPEC.md にまとめさせ、承認してから次へ。</p>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="phase-n">02</span>
+        <div>
+          <h3>技術選定と計画を出させる</h3>
+          <p>選択肢を2〜3案とトレードオフ。実装は縦切りの9ステップに分け、各ステップに機械的に検証できる受け入れ条件を付ける。</p>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="phase-n">03</span>
+        <div>
+          <h3>1ステップずつ実装させる</h3>
+          <p>完了ごとに受け入れ条件の結果を報告させ、こちらが確認してから次へ。計画から外れそうなら止めて相談させる。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide">
+    <div class="eyebrow">進め方</div>
+    <h2>決めたことをリポジトリに残す</h2>
+    <div class="routes">
+      <div class="route">
+        <span class="route-name">SPEC.md</span>
+        <span class="route-desc">何を作るか。ヒアリングの結果と、サーバーを調べて分かったこと。</span>
+      </div>
+      <div class="route">
+        <span class="route-name">PLAN.md</span>
+        <span class="route-desc">どう作るか。技術選定の理由、9ステップ、各ステップの受け入れ条件と進捗。</span>
+      </div>
+      <div class="route">
+        <span class="route-name">DECISIONS.md</span>
+        <span class="route-desc">実装中に決めたこと28件。なぜそうしたか、代償は何か、いつ見直すか。</span>
+      </div>
+      <div class="route">
+        <span class="route-name">OPERATIONS.md</span>
+        <span class="route-desc">動かし方、壊れたときの直し方、手作業が必要な部分。</span>
+      </div>
+    </div>
+    <p><strong>会話が途切れても文脈が消えない。</strong>実際この開発でも、途中で接続が切れたり別の話題を挟んだりしたが、ファイルを読めば続きから再開できた。</p>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide">
+    <div class="eyebrow">やってみて</div>
+    <h2>AI が間違えた3か所</h2>
+    <ul>
+      <li><strong>文字が大きすぎた</strong> ── 画面の22%を1文字に割り当て、2文字しか入らなかった。実際に描画して初めて分かった。</li>
+      <li><strong>型チェックが通るのに起動しない</strong> ── TypeScript のある書き方が、ビルドなしの実行方式では動かなかった。<code>tsc</code> は素通りする。</li>
+      <li><strong>systemd が古い Node を掴んだ</strong> ── 手で動かすと v24、サービスとして動かすと v18。環境変数の展開規則も踏んだ。</li>
+    </ul>
+    <p class="dim">どれも「書けているか」ではなく「実際に動かしたか」で見つかったもの。受け入れ条件を機械で確認できる形にしておくのが効いた。</p>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide">
+    <div class="eyebrow">やってみて</div>
+    <h2>効いたこと</h2>
+    <div class="cols two">
+      <div class="block">
+        <h3>先に環境を調べさせた</h3>
+        <p>「サーバーは常時稼働が保証されない兼用機」と分かったのが設計前だったので、オフライン耐性を最優先に据えられた。作ってから気付くと作り直しになる。</p>
+      </div>
+      <div class="block">
+        <h3>各ステップに検証手順を持たせた</h3>
+        <p>「テストが通る」「curl で 200 が返る」「2回実行して差分が出ない」。曖昧な完了報告にならず、人間は結果を見るだけで済む。</p>
+      </div>
+      <div class="block">
+        <h3>1日で本番まで到達した</h3>
+        <p>要件を聞くところから、ドメインを付けて公開するところまで。土日の空き時間で終わる規模になった。</p>
+      </div>
+      <div class="block">
+        <h3>面倒な部分こそ任せられた</h3>
+        <p>systemd の unit、バックアップの世代管理、運用手順書。人間だけだと後回しになりがちな部分が最初から揃った。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 -->
+  <section class="slide" data-tone="lead">
+    <div class="eyebrow">まとめ</div>
+    <h2>置いてあるだけの iPad が<br>掲示板になった</h2>
+    <div class="cols">
+      <div class="block">
+        <h3>使う人</h3>
+        <p>Discord に一言打つだけ。期限が来たら勝手に消える。</p>
+      </div>
+      <div class="block">
+        <h3>中身</h3>
+        <p>1プロセス、SQLite 1ファイル、ビルドなし。月額0円。</p>
+      </div>
+      <div class="block">
+        <h3>作り方</h3>
+        <p>仕様→計画→実装の順に、AI が書いて人間が確認。</p>
+      </div>
+    </div>
+    <p class="caption">github.com/EngineMaker/signboard &nbsp;·&nbsp; signboard.emaker.dev</p>
+  </section>
+
+</div>
+
+<div class="bar">
+  <span class="bar-title">リビングの電光掲示板</span>
+  <nav>
+    <button type="button" id="prev" aria-label="前のスライド">←</button>
+    <button type="button" id="next" aria-label="次のスライド">→</button>
+    <span id="counter"></span>
+  </nav>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var counter = document.getElementById('counter');
+  var current = 0;
+
+  function show(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(function (s, n) { s.classList.toggle('is-active', n === current); });
+    counter.textContent = (current + 1) + ' / ' + slides.length;
+    try { location.hash = String(current + 1); } catch (e) { /* file:// では失敗しうる */ }
+    var active = slides[current];
+    if (active) active.scrollTop = 0;
+  }
+
+  document.getElementById('prev').addEventListener('click', function () { show(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { show(current + 1); });
+
+  document.addEventListener('keydown', function (e) {
+    switch (e.key) {
+      case 'ArrowRight': case ' ': case 'PageDown': case 'n':
+        e.preventDefault(); show(current + 1); break;
+      case 'ArrowLeft': case 'PageUp': case 'p':
+        e.preventDefault(); show(current - 1); break;
+      case 'Home': e.preventDefault(); show(0); break;
+      case 'End': e.preventDefault(); show(slides.length - 1); break;
+    }
+  });
+
+  // 画面の左右どちらを押したかで前後に動く（タブレットでの発表用）
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('.bar') || e.target.closest('a')) return;
+    show(e.clientX < window.innerWidth / 3 ? current - 1 : current + 1);
+  });
+
+  function fromHash() {
+    var n = parseInt(String(location.hash).replace('#', ''), 10);
+    return isNaN(n) ? 0 : n - 1;
+  }
+
+  window.addEventListener('hashchange', function () {
+    if (fromHash() !== current) show(fromHash());
+  });
+
+  show(fromHash());
+})();
+</script>
