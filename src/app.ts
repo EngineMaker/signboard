@@ -8,6 +8,7 @@ import { streamRoutes } from './routes/stream.ts';
 import { EventBus } from './events/bus.ts';
 import { adminApiRoutes } from './routes/admin-api.ts';
 import { publicApiRoutes } from './routes/public-api.ts';
+import { isCrawler, renderCard } from './routes/og-card.ts';
 import { authRoutes } from './routes/auth.ts';
 import { getCookie } from 'hono/cookie';
 import { decodeSession } from './auth/session.ts';
@@ -52,16 +53,48 @@ export function createApp(db: DB, opts: AppOptions = {}) {
     // 未ログインはログインへ送る（API と違い 401 を返しても人間には不親切なため）。
     app.get('/admin', (c) => {
       if (!decodeSession(getCookie(c, SESSION_COOKIE), auth.sessionSecret)) {
+        // クローラーには /admin/ を見に行かせる（そこでカードを返す）
+        if (isCrawler(c.req.header('user-agent'))) return c.redirect('/admin/');
         return c.redirect('/auth/login');
       }
       return c.redirect('/admin/');
     });
 
+    /*
+     * 管理画面は認証必須。ただし次の2つは通す。
+     *
+     *  - OGP 画像: クローラーはログインできないので、塞ぐと絵が出ない
+     *  - クローラーからのページ要求: メタタグだけの HTML を返す
+     *
+     * どちらも返すのは題名・説明・絵だけで、お知らせ一覧や APIキーは含まない。
+     */
     app.use('/admin/*', async (c, next) => {
-      if (!decodeSession(getCookie(c, SESSION_COOKIE), auth.sessionSecret)) {
-        return c.redirect('/auth/login');
+      if (c.req.path === '/admin/ogp.png') {
+        await next();
+        return;
       }
-      await next();
+
+      if (decodeSession(getCookie(c, SESSION_COOKIE), auth.sessionSecret)) {
+        await next();
+        return;
+      }
+
+      const base = opts.baseUrl ?? '';
+      if (isCrawler(c.req.header('user-agent'))) {
+        return c.html(
+          renderCard({
+            siteName: 'リビングの電光掲示板',
+            title: '掲示板の管理',
+            description:
+              'お知らせの投稿・編集と、文字サイズやスクロール速度の設定。EM住民ロールを持っている人が使えます。',
+            url: `${base}/admin/`,
+            image: `${base}/admin/ogp.png`,
+            imageAlt: '黒地に琥珀色のドットで SIGNBOARD と描かれた管理画面の案内画像',
+          }),
+        );
+      }
+
+      return c.redirect('/auth/login');
     });
   }
 

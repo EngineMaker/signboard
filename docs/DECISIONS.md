@@ -324,3 +324,30 @@ Cloudflare は静的ファイルを既定で数時間キャッシュする（`ma
 サーバー上のファイルだけ見ても分からない。
 
     curl -s https://signboard.emaker.dev/app.js | grep -c '<追加した関数名>'
+
+## D-031: 認証必須ページの OGP は、クローラーにだけカードを返す
+
+**日付**: 2026-09-20 / **Step**: 10（MVP後）
+
+管理画面（`/admin/`）は認証必須なので、Discord のクローラーはページを読めず
+カードが出ない。User-Agent で判定し、クローラーにはメタタグだけの HTML を返す。
+
+**認証の迂回ではない**。返すのは題名・説明・画像URLだけで、お知らせ一覧・
+APIキー・操作履歴は一切含まない。テストで漏れないことを確認している。
+
+- User-Agent は詐称できるが、偽っても得られるのは公開して構わない情報だけ
+- `/admin/ogp.png` もガードから外す（クローラーが画像を取れないため）
+- 管理API (`/api/admin/*`) はクローラーでも 401 のまま
+
+## D-032: OGP 画像も生成スクリプトで管理する
+
+**日付**: 2026-09-20 / **Step**: 10（MVP後）
+
+`assets/make-ogp.py` で生成する。アプリアイコン（D-010）と同じ
+LED ドットマトリクスの意匠にし、掲示板・アイコン・OGP で見た目を揃えた。
+
+    python3 assets/make-ogp.py board > assets/ogp-board.svg
+    python3 assets/make-ogp.py admin > assets/ogp-admin.svg
+
+SVG から PNG への変換はブラウザのスクリーンショットで行う。
+OGP は PNG のほうが確実に表示されるため。
