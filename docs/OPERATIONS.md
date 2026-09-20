@@ -16,15 +16,37 @@ sudo apt update
 sudo apt install -y sqlite3
 ```
 
-cloudflared は Ubuntu の標準リポジトリに無いため、Cloudflare のリポジトリを追加する:
+cloudflared は Ubuntu の標準リポジトリに無い。どちらかの方法で入れる。
+
+**方法A: Cloudflare のリポジトリを追加（要 sudo）**
+
+sources.list は1行でなければならない。`echo` だと端末で折り返されて壊れることがあるため
+`printf` を使い、1コマンドずつ実行する。
 
 ```bash
-curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
-  | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
-  | sudo tee /etc/apt/sources.list.d/cloudflared.list
+curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+```
+```bash
+printf 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main\n' | sudo tee /etc/apt/sources.list.d/cloudflared.list
+```
+```bash
 sudo apt update && sudo apt install -y cloudflared
 ```
+
+`Malformed entry ... (URI)` が出たら、リスト行が改行で割れている。
+`sudo rm /etc/apt/sources.list.d/cloudflared.list` して上記をやり直す。
+
+**方法B: 公式バイナリを置く（sudo 不要）**
+
+```bash
+mkdir -p ~/.local/bin
+curl -fsSL -o ~/.local/bin/cloudflared \
+  https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+chmod +x ~/.local/bin/cloudflared
+~/.local/bin/cloudflared --version
+```
+
+unit ファイルは PATH から `cloudflared` を探すので、どちらでも動く。
 
 ### 1.2 リポジトリの配置
 

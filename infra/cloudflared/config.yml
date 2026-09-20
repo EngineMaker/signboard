@@ -5,6 +5,8 @@
 # トンネルの作成と認証情報の取得は手動（docs/OPERATIONS.md 参照）。
 
 tunnel: signboard
+# ${HOME} は cloudflared が展開しないため絶対パスで書く。
+# 別ユーザーで動かす場合はここを書き換えること。
 credentials-file: /home/mktoho/.cloudflared/signboard.json
 
 ingress:

@@ -1,5 +1,8 @@
 # Cloudflare Tunnel を systemd の user unit として常駐させる。
 # 配置先: ~/.config/systemd/user/signboard-tunnel.service
+#
+# cloudflared の場所は環境で変わるため（apt 版は /usr/bin、
+# バイナリ配置なら ~/.local/bin）、PATH から探させる。
 
 [Unit]
 Description=Cloudflare Tunnel for signboard
@@ -9,7 +12,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/cloudflared tunnel --config %h/.cloudflared/config.yml run
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env cloudflared tunnel --config %h/.cloudflared/config.yml run
 Restart=always
 RestartSec=10
 
