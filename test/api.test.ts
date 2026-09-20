@@ -16,9 +16,10 @@ beforeEach(() => {
 const base = { authorId: '111', authorName: 'けーえむ', source: 'web' as const };
 
 interface NoticesResponse {
-  notices: { id: number; body: string; authorName: string }[];
+  notices: { id: number; body: string; authorName: string; createdAt: number }[];
   settings: typeof DEFAULT_SETTINGS;
   serverTime: number;
+  latestAt: number | null;
 }
 
 const get = async (): Promise<NoticesResponse> => {
@@ -68,6 +69,35 @@ describe('GET /api/notices', () => {
   it('サーバー時刻を含む（端末の時計ずれ検出用）', async () => {
     const body = await get();
     expect(body.serverTime).toBeGreaterThan(1_700_000_000_000);
+  });
+
+  it('新着判定のため createdAt を含む', async () => {
+    const now = Date.now();
+    createNotice(db, { ...base, body: 'test' }, now);
+
+    const notice = (await get()).notices[0]!;
+    expect(notice.createdAt).toBe(now);
+  });
+
+  it('最新の投稿時刻を latestAt で返す', async () => {
+    const now = Date.now();
+    createNotice(db, { ...base, body: '古い' }, now - 60000);
+    createNotice(db, { ...base, body: '新しい' }, now - 1000);
+
+    expect((await get()).latestAt).toBe(now - 1000);
+  });
+
+  it('お知らせが無ければ latestAt は null', async () => {
+    expect((await get()).latestAt).toBeNull();
+  });
+
+  it('期限切れは latestAt の計算に入れない', async () => {
+    const now = Date.now();
+    createNotice(db, { ...base, body: '有効', }, now - 60000);
+    createNotice(db, { ...base, body: '期限切れ', expiresAt: now - 1000 }, now - 500);
+
+    // 期限切れのほうが新しいが、表示されないので latestAt には出ない
+    expect((await get()).latestAt).toBe(now - 60000);
   });
 
   it('投稿者名を含むが、内部IDは漏らさない', async () => {

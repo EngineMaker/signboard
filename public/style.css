@@ -111,6 +111,63 @@ html, body {
 
 #status[hidden] { display: none; }
 
+/* ---- 最終更新の時刻 ---- */
+
+/*
+ * 左下に控えめに出す。内容が何日も変わっていないときに
+ * 「古い情報を見ている」と分かるようにするためのもの。
+ */
+#latest {
+  position: absolute;
+  left: calc(1.5vw + env(safe-area-inset-left, 0px));
+  bottom: calc(1.5vh + env(safe-area-inset-bottom, 0px));
+  font-size: 2.2vh;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+#latest[hidden] { display: none; }
+
+/* ---- 新着の強調 ---- */
+
+/*
+ * 投稿から5分間は、その1件だけを琥珀色で流す。
+ * リビングに居続ける人が変化に気づけるようにするため。
+ * 点滅はさせない。生活空間なので、視界の端で騒がしいのは避ける。
+ */
+:root { --new: #ffb020; }
+
+body.is-new #content { color: var(--new); }
+
+.badge-new {
+  display: inline-block;
+  margin-right: 0.6em;
+  padding: 0.05em 0.4em;
+  border: 0.06em solid var(--new);
+  border-radius: 0.15em;
+  color: var(--new);
+  font-size: 0.55em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  vertical-align: 0.35em;
+}
+
+/* 新着の間は上下の縁をうっすら光らせる。文字が流れ去っていても状態が残る */
+body.is-new #ticker::before,
+body.is-new #ticker::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0.4vh;
+  background: var(--new);
+  opacity: 0.45;
+}
+
+body.is-new #ticker::before { top: 0; }
+body.is-new #ticker::after { bottom: 0; }
+
 /* ---- 全画面ボタン（パソコン用） ---- */
 
 /*

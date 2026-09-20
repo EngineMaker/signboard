@@ -13,16 +13,25 @@ export function apiRoutes(db: DB) {
    */
   app.get('/notices', (c) => {
     const now = Date.now();
-    const notices = listActiveNotices(db, now).map((n) => ({
+    const rows = listActiveNotices(db, now);
+
+    const notices = rows.map((n) => ({
       id: n.id,
       body: n.body,
       authorName: n.author_name,
+      // 新着かどうかの判定と「最終更新」の表示に使う
+      createdAt: n.created_at,
     }));
+
+    // 一番新しいお知らせの投稿時刻。0件なら null。
+    // 画面の隅に「最終更新 14:32」と出すために返す。
+    const latestAt = rows.length > 0 ? Math.max(...rows.map((n) => n.created_at)) : null;
 
     return c.json({
       notices,
       settings: getSettings(db),
       serverTime: now,
+      latestAt,
     });
   });
 

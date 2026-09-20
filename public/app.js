@@ -16,6 +16,11 @@ var POLL_INTERVAL_FALLBACK_MS = 30000;
 var STALE_THRESHOLD_MS = 90000;
 /** 再接続の待ち時間（指数バックオフの上限） */
 var RECONNECT_MAX_MS = 30000;
+/**
+ * 投稿からこの時間だけ「新着」として扱う。
+ * その間はその1件だけを流し、過ぎたら通常のローテーションに戻る。
+ */
+var NEW_WINDOW_MS = 5 * 60 * 1000;
 
 var els = {
   date: document.getElementById('date'),
@@ -23,6 +28,7 @@ var els = {
   track: document.getElementById('track'),
   content: document.getElementById('content'),
   status: document.getElementById('status'),
+  latest: document.getElementById('latest'),
 };
 
 /** 直近で取得に成功した時刻。null なら一度も成功していない。 */
@@ -35,6 +41,8 @@ var reconnectDelay = 1000;
 var pollTimer = null;
 /** 表示中の内容。差分がなければ DOM に触らずアニメーションを途切れさせない。 */
 var renderedKey = '';
+/** 新着の表示が切れる時刻。過ぎたら通常表示に戻す。 */
+var newUntil = 0;
 
 // ---- 時計 ----
 
@@ -74,20 +82,52 @@ function writeCache(data) {
 // ---- 描画 ----
 
 /**
+ * 投稿から NEW_WINDOW_MS 以内のお知らせを返す。無ければ null。
+ *
+ * リビングに居続ける人は、内容が変わっても気づけない。
+ * 新着が出たらそれだけを流して、変化があったことを分かるようにする。
+ */
+function findNewNotice(data, now) {
+  var notices = (data && data.notices) || [];
+  var newest = null;
+
+  for (var i = 0; i < notices.length; i++) {
+    var n = notices[i];
+    if (typeof n.createdAt !== 'number') continue;
+    if (now - n.createdAt > NEW_WINDOW_MS) continue;
+    if (!newest || n.createdAt > newest.createdAt) newest = n;
+  }
+  return newest;
+}
+
+/**
  * お知らせを1本の帯に連結する。
  * 0件なら設定のフォールバック文言を出す（SPEC §2.2）。
+ *
+ * 新着があるときは、その1件だけを強調して流す。
+ * 複数件を連結したままだと、新しいものが末尾に紛れて一周待つことになる。
  */
-function buildContent(data) {
+function buildContent(data, now) {
   var notices = (data && data.notices) || [];
   var settings = (data && data.settings) || {};
 
   if (notices.length === 0) {
     var fallback = settings.fallbackText || 'お知らせ募集中';
-    return [{ text: fallback }];
+    return { items: [{ text: fallback }], isNew: false };
   }
-  return notices.map(function (n) {
-    return { text: n.body };
-  });
+
+  var fresh = findNewNotice(data, now);
+  if (fresh) {
+    newUntil = fresh.createdAt + NEW_WINDOW_MS;
+    return { items: [{ text: fresh.body, isNew: true }], isNew: true };
+  }
+
+  return {
+    items: notices.map(function (n) {
+      return { text: n.body };
+    }),
+    isNew: false,
+  };
 }
 
 function applySettings(settings) {
@@ -118,7 +158,9 @@ function applyScrollDuration(settings) {
 }
 
 function render(data) {
-  var items = buildContent(data);
+  var now = Date.now();
+  var built = buildContent(data, now);
+  var items = built.items;
   var key = JSON.stringify(items) + '|' + JSON.stringify(data && data.settings);
 
   // 内容が同じなら何もしない。再描画するとスクロールが先頭に戻ってしまう。
@@ -126,6 +168,15 @@ function render(data) {
   renderedKey = key;
 
   els.content.textContent = '';
+
+  if (built.isNew) {
+    // 新着であることを示す印。文字と一緒に流れる。
+    var badge = document.createElement('span');
+    badge.className = 'badge-new';
+    badge.textContent = 'NEW';
+    els.content.appendChild(badge);
+  }
+
   items.forEach(function (item, i) {
     if (i > 0) {
       var sep = document.createElement('span');
@@ -136,12 +187,35 @@ function render(data) {
     els.content.appendChild(document.createTextNode(item.text));
   });
 
+  // 新着の間は画面全体を琥珀寄りにして、視界の端でも変化が分かるようにする
+  document.body.classList.toggle('is-new', built.isNew);
+
   applySettings(data && data.settings);
+  renderLatestAt(data);
 
   // レイアウト確定後に幅を測る
   requestAnimationFrame(function () {
     applyScrollDuration(data && data.settings);
   });
+}
+
+/** 最後にお知らせが追加された時刻を隅に出す。いつから変わっていないかが分かる。 */
+function renderLatestAt(data) {
+  var el = els.latest;
+  if (!el) return;
+
+  var at = data && data.latestAt;
+  if (!at) {
+    el.hidden = true;
+    return;
+  }
+
+  var d = new Date(at);
+  var sameDay = new Date().toDateString() === d.toDateString();
+  var time = d.getHours() + ':' + pad2(d.getMinutes());
+
+  el.textContent = '最終更新 ' + (sameDay ? time : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + time);
+  el.hidden = false;
 }
 
 // ---- 状態表示 ----
@@ -356,6 +430,16 @@ function start() {
   setPollInterval(POLL_INTERVAL_FALLBACK_MS);
   setInterval(renderStatus, 10000);
   connectStream();
+
+  // 新着の表示期間が切れたら、通常のローテーションに戻す。
+  // 通信は発生しないので、キャッシュから描き直すだけ。
+  setInterval(function () {
+    if (newUntil && Date.now() > newUntil) {
+      newUntil = 0;
+      var cached = readCache();
+      if (cached && cached.data) render(cached.data);
+    }
+  }, 5000);
 
   // 画面復帰時（スリープ明け）は即座に取り直す。
   // スリープ中に SSE が切れていることが多いので、繋ぎ直しも試みる。
