@@ -65,7 +65,27 @@ export function createApp(db: DB, opts: AppOptions = {}) {
     });
   }
 
-  // 掲示板画面。ビルド工程を置かず public/ をそのまま配信する。
+  /*
+   * 掲示板画面。ビルド工程を置かず public/ をそのまま配信する。
+   *
+   * ただし Cloudflare は静的ファイルを既定で数時間キャッシュするため、
+   * デプロイしても古い JS/CSS が配られ続ける。HTML だけ新しくなって
+   * 中身が食い違う事故が起きたので、キャッシュの扱いを明示する。
+   */
+  app.use('/*', async (c, next) => {
+    await next();
+
+    const path = c.req.path;
+    if (path.endsWith('.js') || path.endsWith('.css')) {
+      // 内容が変わったら即座に反映したい。更新の頻度は低いので
+      // 毎回取りに来ても負荷にならない。
+      c.header('Cache-Control', 'no-cache, must-revalidate');
+    } else if (path.endsWith('.mp4') || path.endsWith('.png') || path.endsWith('.jpg')) {
+      // 画像や動画は差し替えの頻度がさらに低く、容量が大きいので長めに持たせる
+      c.header('Cache-Control', 'public, max-age=86400');
+    }
+  });
+
   app.use('/*', serveStatic({ root: './public' }));
 
   return app;
