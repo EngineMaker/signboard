@@ -257,3 +257,39 @@ DB には平文を置かない。漏れても元のキーは復元できない�
 一覧の「最終使用」と監査ログで追える。
 
 - 代償: 退去した住人のキーが残りうる。運用で失効させる（OPERATIONS.md に記載予定）
+
+## D-026: node の絶対パスを unit ファイルに埋め込む
+
+**日付**: 2026-09-20 / **Step**: 9
+
+サーバーの node は mise 管理（`~/.local/share/mise/installs/node/lts/bin/node`）。
+systemd は対話シェルの PATH を引き継がないため、そのままでは `/usr/bin/node`（v18）が
+使われ、`--experimental-strip-types` が無く起動に失敗する。
+
+さらに **systemd は ExecStart の「コマンド本体」に環境変数を展開しない**。
+`ExecStart=${NODE_BIN} ...` と書くと 203/EXEC になる（引数部分なら展開される）。
+
+そのため unit に `@NODE_BIN@` というプレースホルダを置き、`setup.sh` が
+実行時に検出した絶対パスで sed 置換してから配置する。
+
+- node のバージョンが上がったら `setup.sh` を流し直す（パスが変われば unit も更新される）
+- `preflight.sh` は systemd 側から見える node のバージョンも表示し、差異に気付けるようにした
+
+## D-027: .env は systemd ではなく node に読ませる
+
+**日付**: 2026-09-20 / **Step**: 9
+
+`EnvironmentFile=` は使わず、`node --env-file-if-exists=.env` に任せる。
+
+同じファイルを systemd と node の両方が解釈すると、値に `#` や引用符が入ったときに
+解釈が食い違い、片方だけ壊れる。読み手を1つに絞る。
+
+## D-028: バックアップの取得直後に健全性を確かめる
+
+**日付**: 2026-09-20 / **Step**: 9
+
+`VACUUM INTO` で取得し、`gzip -t` で圧縮ファイルの健全性を確認してから完了とする。
+「取れているつもりで壊れていた」を、復元が必要になった当日に気付くのを避ける。
+
+復元手順は OPERATIONS.md §4 に書いた。実際に展開して
+`PRAGMA integrity_check` が ok になることを確認済み。

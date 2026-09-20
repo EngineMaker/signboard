@@ -192,15 +192,15 @@
 
 **AC**: `curl -H "Authorization: Bearer $KEY" ...` で投稿でき、無効キーは401 / DB内に平文キーが存在しないことをテストで検証
 
-### Step 9: インフラのコード化とデプロイ ★要レビュー
+### Step 9: インフラのコード化とデプロイ ★要レビュー ✅ 実装完了・レビュー待ち (2026-09-20)
 
-- [ ] `infra/` 一式を作成（§1.3 の表のとおり）
-- [ ] `infra/preflight.sh` — 適用前チェック
-- [ ] `infra/setup.sh` — 冪等なセットアップ（sudo不要）
-- [ ] systemd user unit で常駐（自動起動・異常時再起動）
-- [ ] Cloudflare Tunnel で `signboard.emaker.dev` を公開
-- [ ] SQLite 日次バックアップ（systemd timer、`VACUUM INTO` で世代管理）
-- [ ] `docs/OPERATIONS.md`（手動介入が必要な箇所・復旧手順・ロールバック）
+- [x] `infra/` 一式を作成（§1.3 の表のとおり）
+- [x] `infra/preflight.sh` — 適用前チェック
+- [x] `infra/setup.sh` — 冪等なセットアップ（sudo不要）
+- [x] systemd user unit で常駐（自動起動・異常時再起動）
+- [x] Cloudflare Tunnel で `signboard.emaker.dev` を公開
+- [x] SQLite 日次バックアップ（systemd timer、`VACUUM INTO` で世代管理）
+- [x] `docs/OPERATIONS.md`（手動介入が必要な箇所・復旧手順）
 
 **AC**:
 - `bash infra/preflight.sh` が全項目 PASS
@@ -228,8 +228,39 @@
 | 6 | ✅ 完了・確認済み (2026-09-20) |
 | 7 | ✅ 完了・実コマンド確認済み (2026-09-20) |
 | 8 | ✅ 完了・レビュー承認済み (2026-09-20) |
-| 9 | 実装中 |
-| 10 | 未着手 |
+| 9 | ✅ 実装完了・**レビュー待ち** (2026-09-20) |
+| 10 | 未着手（MVP後の拡張） |
+
+**Step 9 の検証結果**
+
+受け入れ条件:
+
+| 条件 | 結果 |
+|---|---|
+| `preflight.sh` が全項目 PASS | OK 11 / NG 0 |
+| `setup.sh` を2回連続実行して差分が出ない | 差分なし（冪等） |
+| `curl https://signboard.emaker.dev/healthz` が 200 | 200 |
+| サーバー再起動後に自動復帰 | SIGKILL から自動復帰、全 unit が enabled + lingering=yes |
+| バックアップを復元でき、アプリが起動する | `PRAGMA integrity_check` = ok、全テーブル確認 |
+
+外部からの疎通（インターネット越し）:
+
+| パス | 結果 |
+|---|---|
+| `/healthz` | 200 |
+| `/api/notices` | 200 |
+| `/`（掲示板） | 200 |
+| `/admin/`（未ログイン） | 302 → `/auth/login` |
+| `/api/v1/notices`（キーなし） | 401 |
+| `/api/stream`（SSE） | `event: connected` を受信 |
+
+**詰まった点と対処**
+
+1. **node が v18 で起動失敗** — node は mise 管理で、systemd の PATH からは
+   `/usr/bin/node`（v18）しか見えず `--experimental-strip-types` が使えなかった。
+2. **`${NODE_BIN}` が展開されず 203/EXEC** — systemd は ExecStart の
+   *コマンド本体* に環境変数を展開しない。`setup.sh` が `@NODE_BIN@` を
+   sed で置換してから unit を配置する方式にした。
 
 **Step 8 の検証結果**
 - `npm test` — PASS (160 tests。うち Step 8 分 24)
