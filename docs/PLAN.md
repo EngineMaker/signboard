@@ -114,11 +114,11 @@
 
 各ステップの `AC` = 受け入れ条件。すべて機械的に検証できる形にしています。
 
-### Step 1: プロジェクト基盤
+### Step 1: プロジェクト基盤 ✅ 完了 (2026-09-20)
 
-- [ ] Node + TypeScript + Hono + vitest のセットアップ
-- [ ] `/healthz` が `{"status":"ok"}` を返す
-- [ ] CI (GitHub Actions) で lint + test が走る
+- [x] Node + TypeScript + Hono + vitest のセットアップ
+- [x] `/healthz` が `{"status":"ok"}` を返す
+- [x] CI (GitHub Actions) で typecheck + test が走る
 
 **AC**: `npm test` が通る / `curl localhost:3100/healthz` が 200 / CI が green
 
@@ -211,8 +211,17 @@
 
 | Step | 状態 |
 |---|---|
-| 1 | 未着手 |
-| 2〜10 | 未着手 |
+| 1 | ✅ 完了 (2026-09-20) |
+| 2 | 次はここ |
+| 3〜10 | 未着手 |
+
+**Step 1 の検証結果**
+- `npm run typecheck` — PASS
+- `npm test` — PASS (1 test)
+- `curl localhost:3100/healthz` — 200 `{"status":"ok"}`
+- CI — push 後に確認
+
+**メモ**: TypeScript は Node v24 の `--experimental-strip-types` で直接実行している（ビルド工程なし）。
 
 ## 5. 変更履歴
 
