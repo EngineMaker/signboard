@@ -220,3 +220,37 @@ lingering が有効なので、ログインしなくても自動で復帰する�
 - `.env` はコミットしない（`.gitignore` 済み）
 - `~/.cloudflared/signboard.json` も秘密。バックアップ対象外
 - API キーの平文は DB に無い。紛失したら再発行する（D-024）
+
+### .env を人に見せない
+
+`cat .env` や `vi .env` の画面を共有・貼り付けしないこと。
+中身を確認したいときは、値を伏せてキー名だけ見る:
+
+```bash
+grep -oE '^[A-Z_]+' .env | sort
+```
+
+項目の過不足だけ調べたいときは `bash infra/preflight.sh` を使う。
+
+### 漏れてしまったときの再発行
+
+| 値 | 再発行の方法 |
+|---|---|
+| `DISCORD_BOT_TOKEN` | Developer Portal → Bot → Reset Token |
+| `DISCORD_CLIENT_SECRET` | Developer Portal → OAuth2 → Reset Secret |
+| `SESSION_SECRET` | `openssl rand -hex 32`（全員が再ログインになる） |
+| API キー | 管理画面で失効させ、発行し直す |
+
+`DISCORD_CLIENT_ID` / `GUILD_ID` / `RESIDENT_ROLE_ID` は公開値なので再発行は不要。
+
+再発行したらローカルとサーバーの両方の `.env` を更新し、
+`systemctl --user restart signboard` する。
+
+### .env をサーバーへ送る
+
+中身を端末に表示せずに転送する:
+
+```bash
+scp ~/work/ai/signboard/.env em105-mktoho:~/apps/signboard/.env
+ssh em105-mktoho 'sed -i "s#^BASE_URL=.*#BASE_URL=https://signboard.emaker.dev#" ~/apps/signboard/.env'
+```
