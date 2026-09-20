@@ -142,12 +142,13 @@
 
 **AC**: `npm test` で API のテストが通る / **iPad 実機でホーム画面に追加して全画面表示を目視確認** / 機内モードにしても流れ続けることを確認
 
-### Step 4: Discord OAuth2 + ロール検証 ★要レビュー
+### Step 4: Discord OAuth2 + ロール検証 ★要レビュー ✅ 実装完了 (2026-09-20)
 
-- [ ] `/login` → Discord 認可 → コールバックでセッション発行
-- [ ] ギルドメンバー情報を取得し「EM住民」ロールを検証
-- [ ] ロールなしは 403
-- [ ] セッションは署名付き Cookie（HttpOnly, Secure, SameSite=Lax）
+- [x] `/auth/login` → Discord 認可 → コールバックでセッション発行
+- [x] ギルドメンバー情報を取得し「EM住民」ロールを検証
+- [x] ロールなしは 403
+- [x] セッションは署名付き Cookie（HttpOnly, SameSite=Lax, 本番のみ Secure）
+- [x] state による CSRF 対策
 
 **AC**: ロールあり/なし/未ログインの3ケースをテストで検証
 
@@ -216,8 +217,23 @@
 | 1 | ✅ 完了 (2026-09-20) |
 | 2 | ✅ 完了・レビュー承認済み (2026-09-20) |
 | 3 | ✅ 完了・実機確認済み (2026-09-20) |
-| 4 | 実装中 |
-| 5〜10 | 未着手 |
+| 4 | ✅ 実装完了 (2026-09-20) |
+| 5 | 次はここ |
+| 6〜10 | 未着手 |
+
+**Step 4 の検証結果**
+- `npm test` — PASS (67 tests。うち認証系 28: session 7 / roles 7 / auth-routes 14)
+- 実 `.env` でサーバー起動 → 「Discord 認証: 有効」
+- **実データでのロール検証**: Bot をサーバー「EngineMakerβ版」に招待し、
+  `DISCORD_RESIDENT_ROLE_ID` が "EM住民" に対応することを確認。
+  ロール保持者 → true / 存在しないユーザー → false
+- SERVER MEMBERS INTENT は**不要**（個別メンバー取得 `GET /guilds/{id}/members/{user}` は intent なしで通る）
+- 未ログインで `/api/me` → 401、公開 API `/api/notices` → 200
+
+**Discord 側の設定（`docs/OPERATIONS.md` に転記予定）**
+- Bot 招待時の権限は `0`（追加権限なし）。メンバーのロール読み取りは参加のみで可能
+- OAuth2 の Redirects に `http://localhost:3100/auth/callback`（開発用）を登録。
+  本番用 `https://signboard.emaker.dev/auth/callback` は Step 9 で追加
 
 **Step 3 の検証結果**（ヘッドレスブラウザ 1024x768 @2x = iPad Pro 9.7 相当）
 - `npm test` — PASS (39 tests)
