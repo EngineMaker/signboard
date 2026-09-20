@@ -1,0 +1,112 @@
+/*
+ * 掲示板の表示。iPad Pro 9.7 (2048x1536) / Safari 16 が対象。
+ * - :has() など Safari 17+ の機能は使わない
+ * - アニメーションは transform のみ（GPU合成に乗せ、A9X でも滑らかに保つ）
+ * - 色は CSS 変数にまとめ、後から LED ドット風テーマを足せるようにする
+ */
+
+:root {
+  --bg: #000;
+  --fg: #fff;
+  --dim: #666;
+  --warn: #c9a227;
+
+  /* JS が設定値から上書きする */
+  --font-scale: 12;
+  --scroll-duration: 20s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+  /* 常時表示なので、うっかり選択・長押しメニューが出ないようにする */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* ホーム画面から起動したときのノッチ・ホームインジケータ回避 */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+           env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* ---- 時計・日付 ---- */
+
+#clock-area {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.6em;
+  padding: 3vh 4vw 0;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+#date { font-size: 4vh; }
+#time { font-size: 7vh; font-weight: 600; color: var(--fg); }
+
+/* ---- スクロールする帯 ---- */
+
+#ticker {
+  flex: 1 1 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+#track {
+  /* 画面右端の外から流し始める */
+  position: absolute;
+  left: 0;
+  white-space: nowrap;
+  will-change: transform;
+  animation: scroll var(--scroll-duration) linear infinite;
+}
+
+#content {
+  display: inline-block;
+  font-size: calc(var(--font-scale) * 1vh);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+/* 区切りの中黒。お知らせ間の切れ目を示す */
+#content .sep {
+  color: var(--dim);
+  padding: 0 1.2em;
+}
+
+@keyframes scroll {
+  /* 右端の外から左端の外へ。translate3d で合成レイヤに載せる */
+  from { transform: translate3d(100vw, 0, 0); }
+  to   { transform: translate3d(-100%, 0, 0); }
+}
+
+/* ---- 状態表示（オフライン警告） ---- */
+
+#status {
+  position: absolute;
+  right: 1.5vw;
+  bottom: 1.5vh;
+  font-size: 2.2vh;
+  color: var(--warn);
+  opacity: 0.85;
+}
+
+#status[hidden] { display: none; }

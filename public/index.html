@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<!-- ホーム画面に追加したとき全画面で開く（iPadOS 16 は apple- 系の指定が必要） -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="掲示板">
+<meta name="format-detection" content="telephone=no">
+<title>電光掲示板</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="screen">
+    <header id="clock-area">
+      <div id="date"></div>
+      <div id="time"></div>
+    </header>
+
+    <main id="ticker">
+      <!-- スクロールする帯。JS が中身を差し替える -->
+      <div id="track"><span id="content"></span></div>
+    </main>
+
+    <div id="status" hidden></div>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -5,9 +5,13 @@ import type { DB } from '../db/index.ts';
  * 管理画面から変更でき、iPad の表示に反映される。
  */
 export interface Settings {
-  /** 横スクロールの速度（px/秒） */
+  /** 横スクロールの速度（px/秒）。文字が大きいほど速くしないと一周が長くなる。 */
   scrollSpeed: number;
-  /** 文字サイズ（画面高さに対する割合 %）。9.7インチでも読める大きさを既定に。 */
+  /**
+   * 文字サイズ（画面高さに対する割合 %）。
+   * 9.7インチ(1024x768 CSS px)では 12 で約92px。リビングの距離から読めて、
+   * かつ1画面に十数文字入る妥協点。管理画面から調整できる。
+   */
   fontScale: number;
   /** テーマ。MVP は dark のみ。将来 'led' を追加する余地を残す。 */
   theme: string;
@@ -16,8 +20,8 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  scrollSpeed: 120,
-  fontScale: 22,
+  scrollSpeed: 220,
+  fontScale: 12,
   theme: 'dark',
   fallbackText: 'お知らせ募集中',
 };
