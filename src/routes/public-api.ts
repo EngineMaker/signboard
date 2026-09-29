@@ -23,6 +23,31 @@ function validateExpiresAt(v: unknown): string | null {
   return null;
 }
 
+/**
+ * 404 の理由。スクリプトが文言に頼らず見分けられるよう、変えない値として返す（D-037）。
+ * 期限切れ（expired）は PATCH のときだけ返す。DELETE は期限切れでも消せる。
+ */
+type NotFoundCode = 'not_found' | 'deleted' | 'expired';
+
+const NOT_FOUND_MESSAGES: Record<NotFoundCode, string> = {
+  not_found: 'お知らせが見つかりません',
+  deleted: 'お知らせは削除済みです',
+  expired: 'お知らせは期限切れです',
+};
+
+function notFound(c: Ctx, code: NotFoundCode) {
+  return c.json({ error: NOT_FOUND_MESSAGES[code], code }, 404);
+}
+
+/** PATCH・DELETE の対象が無いときの理由。対象があれば null。 */
+function missingReason(db: DB, id: number, opts: { rejectExpired: boolean }): NotFoundCode | null {
+  const current = getNotice(db, id);
+  if (!current) return 'not_found';
+  if (current.deleted_at !== null) return 'deleted';
+  if (opts.rejectExpired && current.expires_at <= Date.now()) return 'expired';
+  return null;
+}
+
 type Ctx = HonoContext<{ Variables: ApiKeyVars }>;
 
 function clientIp(c: Ctx): string | null {
@@ -111,13 +136,11 @@ export function publicApiRoutes(db: DB, events?: EventBus) {
 
     // 期限切れは「もう無いもの」として扱う。GET の既定と揃え、
     // 期限の延長で消えたお知らせが復活しないようにする（D-036）
-    const current = getNotice(db, id);
-    if (current && current.expires_at <= Date.now()) {
-      return c.json({ error: 'お知らせは期限切れです' }, 404);
-    }
+    const missing = missingReason(db, id, { rejectExpired: true });
+    if (missing) return notFound(c, missing);
 
     const notice = updateNotice(db, id, patch, context(c, events));
-    if (!notice) return c.json({ error: 'お知らせが見つかりません' }, 404);
+    if (!notice) return notFound(c, 'not_found');
 
     return c.json({ notice: { id: notice.id, body: notice.body, expiresAt: notice.expires_at } });
   });
@@ -126,8 +149,11 @@ export function publicApiRoutes(db: DB, events?: EventBus) {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id)) return c.json({ error: 'ID が不正です' }, 400);
 
+    const missing = missingReason(db, id, { rejectExpired: false });
+    if (missing) return notFound(c, missing);
+
     const notice = deleteNotice(db, id, context(c, events));
-    if (!notice) return c.json({ error: 'お知らせが見つかりません' }, 404);
+    if (!notice) return notFound(c, 'not_found');
 
     return c.json({ deleted: { id: notice.id, body: notice.body } });
   });

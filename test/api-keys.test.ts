@@ -204,8 +204,33 @@ describe('公開 API の操作', () => {
       body: JSON.stringify({ expiresAt: Date.now() + HOUR }),
     });
     expect(patch.status).toBe(404);
+    expect(await patch.json()).toEqual({ error: 'お知らせは期限切れです', code: 'expired' });
     expect(listActiveNotices(db)).toHaveLength(0);
     expect(listAuditLogs(db, { action: 'notice.update' })).toHaveLength(0);
+  });
+
+  it('404 の理由を code で見分けられる', async () => {
+    const res = await call('/notices', { method: 'POST', body: JSON.stringify({ body: '手で消される' }) });
+    const { notice } = (await res.json()) as { notice: { id: number } };
+    await call(`/notices/${notice.id}`, { method: 'DELETE' });
+
+    const patchDeleted = await call(`/notices/${notice.id}`, { method: 'PATCH', body: JSON.stringify({ body: 'x' }) });
+    expect(patchDeleted.status).toBe(404);
+    expect(await patchDeleted.json()).toEqual({ error: 'お知らせは削除済みです', code: 'deleted' });
+
+    const deleteAgain = await call(`/notices/${notice.id}`, { method: 'DELETE' });
+    expect(await deleteAgain.json()).toEqual({ error: 'お知らせは削除済みです', code: 'deleted' });
+
+    const patchMissing = await call('/notices/9999', { method: 'PATCH', body: JSON.stringify({ body: 'x' }) });
+    expect(await patchMissing.json()).toEqual({ error: 'お知らせが見つかりません', code: 'not_found' });
+  });
+
+  it('期限切れでも DELETE はできる', async () => {
+    await call('/notices', { method: 'POST', body: JSON.stringify({ body: '古い' }) });
+    const id = listActiveNotices(db)[0]!.id;
+    db.prepare('UPDATE notices SET expires_at = ? WHERE id = ?').run(Date.now() - 1, id);
+
+    expect((await call(`/notices/${id}`, { method: 'DELETE' })).status).toBe(200);
   });
 
   it('PATCH の期限も POST と同じく1年以内', async () => {

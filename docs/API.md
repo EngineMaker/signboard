@@ -241,6 +241,19 @@ curl -X DELETE https://signboard.emaker.dev/api/v1/notices/12 \
 { "error": "本文が空です" }
 ```
 
+`404` のときは、理由を表す `code` も付きます。文言は変わることがありますが、
+`code` の値は変えません。スクリプトで見分けるときはこちらを見てください。
+
+```json
+{ "error": "お知らせは期限切れです", "code": "expired" }
+```
+
+| `code` | 意味 |
+|---|---|
+| `not_found` | そのIDのお知らせは最初から無い |
+| `deleted` | 削除済み（管理画面や Discord から誰かが消した場合も含む） |
+| `expired` | 期限切れ（PATCH のときだけ。DELETE は期限切れでも消せる） |
+
 `400` になるのは次の場合です。
 
 | メッセージ | 原因 |

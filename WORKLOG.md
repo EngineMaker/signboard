@@ -52,7 +52,7 @@
 | バックアップ | 毎日 04:30 に `VACUUM INTO` で30日分 |
 | 月額 | **0円** |
 
-テスト 193件・CI green・TODO/FIXME ゼロ。決定事項は `docs/DECISIONS.md` に36件（ADR形式）。
+テスト 193件・CI green・TODO/FIXME ゼロ。決定事項は `docs/DECISIONS.md` に37件（ADR形式）。
 
 ### 🚀 デプロイのしかた
 
@@ -94,6 +94,7 @@ bash infra/setup.sh      # 冪等。変更が無ければ何もしない
   リポジトリには入れていない。Cosense への投稿はユーザー待ち
 - 2026-09-30: rain-alert から API 連携の問い合わせ。調べる中で見つかった公開 API の PATCH の穴を修正（D-036）。
   期限切れは 404 にして復活させない／期限の1年上限を POST と揃えた
+- 2026-09-30: 公開 API の 404 に理由の `code`（not_found / deleted / expired）を追加（D-037）。rain-alert の要望
 
 ## 📚 ドキュメントの地図
 
@@ -103,7 +104,7 @@ bash infra/setup.sh      # 冪等。変更が無ければ何もしない
 | なぜ作ったか | `REQUEST.md` |
 | 仕様 | `docs/SPEC.md` |
 | 実装の計画と進捗 | `docs/PLAN.md` |
-| **なぜそう決めたか（36件）** | `docs/DECISIONS.md` |
+| **なぜそう決めたか（37件）** | `docs/DECISIONS.md` |
 | **運用・トラブル対応** | `docs/OPERATIONS.md` |
 | API の叩き方 | `docs/API.md` |
 | 発表スライド（18枚） | `docs/slides/index.html` |
