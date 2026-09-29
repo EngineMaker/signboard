@@ -52,7 +52,7 @@
 | バックアップ | 毎日 04:30 に `VACUUM INTO` で30日分 |
 | 月額 | **0円** |
 
-テスト 193件・CI green・TODO/FIXME ゼロ。決定事項は `docs/DECISIONS.md` に35件（ADR形式）。
+テスト 193件・CI green・TODO/FIXME ゼロ。決定事項は `docs/DECISIONS.md` に36件（ADR形式）。
 
 ### 🚀 デプロイのしかた
 
@@ -90,6 +90,10 @@ bash infra/setup.sh      # 冪等。変更が無ければ何もしない
 - OGP と favicon（小サイズと大サイズで意匠を変える / D-034）
 - **新着を5分間だけ強調表示**（D-033）← 「居続ける人は変化に気づけない」という指摘から
 - **新着で画面を光らせる**（D-035）。光り方4種を管理画面で選べて、その場でテスト送信できる
+- 2026-09-29: Cosense 用の概要ページ（前半: 住民向けの使い方 / 後半: 開発の記録）を下書き。
+  リポジトリには入れていない。Cosense への投稿はユーザー待ち
+- 2026-09-30: rain-alert から API 連携の問い合わせ。調べる中で見つかった公開 API の PATCH の穴を修正（D-036）。
+  期限切れは 404 にして復活させない／期限の1年上限を POST と揃えた
 
 ## 📚 ドキュメントの地図
 
@@ -99,7 +103,7 @@ bash infra/setup.sh      # 冪等。変更が無ければ何もしない
 | なぜ作ったか | `REQUEST.md` |
 | 仕様 | `docs/SPEC.md` |
 | 実装の計画と進捗 | `docs/PLAN.md` |
-| **なぜそう決めたか（35件）** | `docs/DECISIONS.md` |
+| **なぜそう決めたか（36件）** | `docs/DECISIONS.md` |
 | **運用・トラブル対応** | `docs/OPERATIONS.md` |
 | API の叩き方 | `docs/API.md` |
 | 発表スライド（18枚） | `docs/slides/index.html` |

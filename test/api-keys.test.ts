@@ -7,7 +7,7 @@ import { encodeSession } from '../src/auth/session.ts';
 import { findByPlaintext, issueApiKey, listApiKeys, revokeApiKey } from '../src/repo/api-keys.ts';
 import { listAuditLogs } from '../src/repo/audit.ts';
 import { listActiveNotices } from '../src/repo/notices.ts';
-import { T0, testDb } from './helpers.ts';
+import { HOUR, T0, testDb } from './helpers.ts';
 
 const auth: AuthConfig = {
   clientId: 'c',
@@ -189,6 +189,36 @@ describe('公開 API の操作', () => {
 
   it('存在しないIDは 404', async () => {
     expect((await call('/notices/9999', { method: 'DELETE' })).status).toBe(404);
+  });
+
+  it('期限切れのお知らせは PATCH できず、復活しない', async () => {
+    const res = await call('/notices', {
+      method: 'POST',
+      body: JSON.stringify({ body: '雨が降っています', expiresAt: Date.now() + 1000 }),
+    });
+    const { notice } = (await res.json()) as { notice: { id: number } };
+    db.prepare('UPDATE notices SET expires_at = ? WHERE id = ?').run(Date.now() - 1, notice.id);
+
+    const patch = await call(`/notices/${notice.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ expiresAt: Date.now() + HOUR }),
+    });
+    expect(patch.status).toBe(404);
+    expect(listActiveNotices(db)).toHaveLength(0);
+    expect(listAuditLogs(db, { action: 'notice.update' })).toHaveLength(0);
+  });
+
+  it('PATCH の期限も POST と同じく1年以内', async () => {
+    await call('/notices', { method: 'POST', body: JSON.stringify({ body: '元の本文' }) });
+    const id = listActiveNotices(db)[0]!.id;
+
+    const tooFar = Date.now() + 366 * 24 * HOUR;
+    const res = await call(`/notices/${id}`, { method: 'PATCH', body: JSON.stringify({ expiresAt: tooFar }) });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'expiresAt が遠すぎます（1年以内）' });
+
+    const ok = await call(`/notices/${id}`, { method: 'PATCH', body: JSON.stringify({ expiresAt: Date.now() + HOUR }) });
+    expect(ok.status).toBe(200);
   });
 });
 

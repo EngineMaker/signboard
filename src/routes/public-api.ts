@@ -2,7 +2,7 @@ import { Hono, type Context as HonoContext } from 'hono';
 import type { DB } from '../db/index.ts';
 import type { EventBus } from '../events/bus.ts';
 import { requireApiKey, type ApiKeyVars } from '../auth/api-key-middleware.ts';
-import { listActiveNotices, listNotices } from '../repo/notices.ts';
+import { getNotice, listActiveNotices, listNotices } from '../repo/notices.ts';
 import { createNotice, deleteNotice, updateNotice } from '../service/notices.ts';
 
 /**
@@ -12,6 +12,16 @@ import { createNotice, deleteNotice, updateNotice } from '../service/notices.ts'
 
 export const MAX_BODY_LENGTH = 200;
 const MAX_EXPIRY_MS = 365 * 24 * 60 * 60 * 1000;
+
+/** expiresAt の検証。POST と PATCH で同じ規則を使う。問題なければ null。 */
+function validateExpiresAt(v: unknown): string | null {
+  if (typeof v !== 'number' || !Number.isFinite(v)) {
+    return 'expiresAt は UNIX 時刻（ミリ秒）で指定してください';
+  }
+  if (v <= Date.now()) return 'expiresAt が過去です';
+  if (v > Date.now() + MAX_EXPIRY_MS) return 'expiresAt が遠すぎます（1年以内）';
+  return null;
+}
 
 type Ctx = HonoContext<{ Variables: ApiKeyVars }>;
 
@@ -61,14 +71,9 @@ export function publicApiRoutes(db: DB, events?: EventBus) {
 
     let expiresAt: number | undefined;
     if (body.expiresAt !== undefined) {
-      if (typeof body.expiresAt !== 'number' || !Number.isFinite(body.expiresAt)) {
-        return c.json({ error: 'expiresAt は UNIX 時刻（ミリ秒）で指定してください' }, 400);
-      }
-      if (body.expiresAt <= Date.now()) return c.json({ error: 'expiresAt が過去です' }, 400);
-      if (body.expiresAt > Date.now() + MAX_EXPIRY_MS) {
-        return c.json({ error: 'expiresAt が遠すぎます（1年以内）' }, 400);
-      }
-      expiresAt = body.expiresAt;
+      const err = validateExpiresAt(body.expiresAt);
+      if (err) return c.json({ error: err }, 400);
+      expiresAt = body.expiresAt as number;
     }
 
     const notice = createNotice(db, { body: text, expiresAt }, context(c, events));
@@ -95,14 +100,20 @@ export function publicApiRoutes(db: DB, events?: EventBus) {
     }
 
     if (body.expiresAt !== undefined) {
-      if (typeof body.expiresAt !== 'number' || body.expiresAt <= Date.now()) {
-        return c.json({ error: 'expiresAt が不正です' }, 400);
-      }
-      patch.expiresAt = body.expiresAt;
+      const err = validateExpiresAt(body.expiresAt);
+      if (err) return c.json({ error: err }, 400);
+      patch.expiresAt = body.expiresAt as number;
     }
 
     if (Object.keys(patch).length === 0) {
       return c.json({ error: '変更する項目がありません' }, 400);
+    }
+
+    // 期限切れは「もう無いもの」として扱う。GET の既定と揃え、
+    // 期限の延長で消えたお知らせが復活しないようにする（D-036）
+    const current = getNotice(db, id);
+    if (current && current.expires_at <= Date.now()) {
+      return c.json({ error: 'お知らせは期限切れです' }, 404);
     }
 
     const notice = updateNotice(db, id, patch, context(c, events));
